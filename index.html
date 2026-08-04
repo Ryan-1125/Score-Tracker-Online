@@ -1,0 +1,208 @@
+<!-- ==========================================================================
+   【HTML 基础标签语法速查】
+   
+   1. 骨架与配置标签：
+      - <html>   : 整个网页的根容器，包裹所有网页内容。
+      - <head>   : 网页的“配置大脑”，存放编码、标题、CSS 引入等配置，内容不在页面直接显示。
+      - <body>   : 网页的“内容身体”，所有在屏幕上能看到的文字、按钮、卡片都写在这里。
+      
+   2. 页面布局与区块划分（块级元素）：
+      - <main>   : 网页的主体内容核心容器（一个页面通常有且只有一个）。
+      - <header> : 区域的头部栏，常用于放置Logo、标题以及操作控制按钮组。
+      - <section>: 逻辑功能独立的卡片或面板，方便结构化拆分和弹性排版。
+      - <div>    : 无特定语义的通用“盒子”，纯粹用于 CSS 样式控制或 JS 逻辑划分。
+      
+   3. 排版文本标签：
+      - <h1>~<h3>: 标题标签，从最大的一级标题 (h1) 逐渐变小到三级标题 (h3)。
+      - <p>      : 段落标签，常用于普通的文本描述、副标题或小提示。
+      - <span>   : 无特定语义的“行内盒子”，常用于在一段话中精准修改某些字词的颜色。
+      
+   4. 表单与用户交互：
+      - <form>   : 表单包，用于一次性打包并提交用户输入的数据（如一组玩家昵称）。
+      - <label>  : 文本标签，常与输入框配对，用来提示该输入框应该填写什么。
+      - <input>  : 文本/数字输入框，允许用户自由打字或微调数值。
+      - <button> : 按钮，点击后可以触发交互动效或执行底层的 JavaScript 逻辑。
+      
+   5. 数据列表展示：
+      - <ul>     : 无序列表容器，与 <li> 标签配对，常用于罗列并列的历史记录数据。
+      - <li>     : 列表里的具体某一个数据单条项。
+      
+   6. 外部资源挂载：
+      - <link>   : 用于引入外部的样式表（styles.css），实现换肤、布局与动画。
+      - <script> : 用于引入外部的逻辑脚本（script.js），实现数据读取、算分及弹窗驱动。
+   ========================================================================== -->
+
+<!doctype html>
+<html lang="zh-CN">
+  
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>牌局记分</title>
+    <!-- 引入网站标签页黑桃小图标 -->
+    <link rel="icon" href="image/poker-spade.png" type="image/png" />
+    <!-- 引入集中管理主题颜色、物理质感与动画的全局样式表 -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <!-- 主应用居中容器：限制了电脑端浏览时的最大宽度，在移动端则自动满屏自适应 -->
+    <main class="app">
+      
+      <!-- 【头部标题模块】
+           左侧展示品牌名和系统主标题，右侧横向集成了：
+           `[ 骰 ]`（掷骰子）、`[ 昼/夜 ]`（切换主题）、`[ 清 ]`（重置房间/分数）、`[ 结 ]`（本局结算）四个高颜值圆形控制按键 -->
+      <header class="hero">
+        <div>
+          <p class="eyebrow">papership</p>
+          <h1>牌局记分</h1>
+          <p class="subtitle"></p>
+        </div>
+        <div class="header-actions">
+          <button id="diceBtn" class="secondary-btn theme-btn" aria-label="掷骰子">骰</button>
+          <button id="themeToggleBtn" class="secondary-btn theme-btn" aria-label="切换主题">昼</button>
+          <button id="resetBtn" class="secondary-btn theme-btn" aria-label="重置房间">清</button>
+          <button id="settleBtn" class="secondary-btn theme-btn" aria-label="结算本局">结</button>
+        </div>
+      </header>
+
+      <!-- 【模块一：选择人数区块（默认首屏展示）】
+           进入牌局记分的第一步，用户在此自由微调本局参与的人数（支持 2 - 8 人，默认为经典 4 人局） -->
+      <section class="panel registration-panel" id="countPanel">
+        <h2 class="step-title">选择人数</h2>
+        <div class="player-count-step">
+          <input id="playerCountInput" type="number" min="2" max="8" value="4" class="count-input" />
+          <button id="nextStepBtn" class="primary-btn next-step-btn">下一步</button>
+        </div>
+      </section>
+
+      <!-- 【模块二：登记昵称区块（初始隐藏：hidden）】
+           当确定人数后开启第二步。
+           表单底部的 inputs-grid 容器会根据 JS 逻辑动态生成对应人数的输入框，用于用户登记名字 -->
+      <section class="panel registration-panel hidden" id="nicknamePanel">
+        <h2 class="step-title">登记昵称</h2>
+        <form id="registrationForm" class="registration-form">
+          <div class="registration-actions">
+            <button type="button" id="backToCountBtn" class="secondary-btn">上一步</button>
+            <button type="submit" class="primary-btn">开始记分</button>
+          </div>
+          <div class="inputs-grid" id="playerNameInputs"></div>
+        </form>
+      </section>
+
+      <!-- 【模块三：核心游戏计分面板（初始隐藏：hidden）
+           名字登记好后，记分主控区开启。
+           上方展示“当前出分人”指示，中间由 JS 渲染玩家名片网格，下方提供防呆和操作的快捷说明 -->
+      <section class="panel game-panel hidden" id="gamePanel">
+        <div class="controls-row">
+          <p id="activePlayerInfo" class="player-info-title">请选择出分人</p>
+        </div>
+
+        <div id="playersGrid" class="players-grid"></div>
+
+        <div class="tips">
+          <p>提示：先点击一位玩家作为“出分人”，然后点击另一位玩家选择转入的分数。</p>
+        </div>
+      </section>
+
+      <!-- 【模块四：积分记录历史面板（初始隐藏：hidden）】
+           与模块三游戏计分同步显示，拉取并呈现本局每一单记账日志，提供 2 分钟时差智能账目归组合并展示 -->
+      <section class="panel logs-panel hidden" id="logsPanel">
+        <div class="logs-header">
+          <h2>历史记录</h2>
+          <span id="recordCount">0 条记录</span>
+        </div>
+        <ul id="logList" class="log-list"></ul>
+      </section>
+    </main>
+
+    <!-- 【全局功能弹窗一：重置操作二次确认框（初始隐藏：hidden）】
+         点击右上角“清”按钮时弹出此遮罩层。
+         支持“重置分数”（保留人名，分数清零）与“重置房间”（彻底退回第一步，重新填人名）双档位选择 -->
+    <div id="dialogOverlay" class="dialog-overlay hidden">
+      <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+        <h3 id="dialogTitle">重置选项</h3>
+        <p id="dialogMessage">请选择要执行的重置方式。</p>
+        <div id="dialogChoiceActions" class="dialog-actions dialog-actions-choice">
+          <button id="chooseCancelBtn" class="dialog-btn dialog-btn-cancel">取消</button>
+          <button id="chooseScoreBtn" class="dialog-btn dialog-btn-score">重置分数</button>
+          <button id="chooseRoomBtn" class="dialog-btn dialog-btn-room">重置房间</button>
+        </div>
+        <div id="dialogConfirmActions" class="dialog-actions hidden">
+          <button id="dialogCancel" class="dialog-btn dialog-btn-cancel">取消</button>
+          <button id="dialogConfirm" class="dialog-btn dialog-btn-confirm">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 【全局功能弹窗二：输入转分金额框（初始隐藏：hidden）】
+         在游戏计分时，当用户依次选中了出分人和赢分人，弹出此对话框，提示用户精确输入此次输分流转的具体分值 -->
+    <div id="amountDialog" class="dialog-overlay hidden">
+      <div class="dialog-card" role="dialog" aria-modal="true">
+        <h3>输入转分金额</h3>
+        <div class="amount-input-group">
+          <label>转分金额：</label>
+          <input id="amountDialogInput" type="number" min="1" value="1" />
+        </div>
+        <div class="dialog-actions">
+          <button id="amountDialogCancel" class="dialog-btn dialog-btn-cancel">取消</button>
+          <button id="amountDialogConfirm" class="dialog-btn dialog-btn-confirm">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 【全局功能弹窗三：掷骰子弹窗（初始隐藏：hidden）】
+         点击右上角“骰”按钮时弹出此遮罩层。
+         内置两个 3D 实物视觉质感的磨砂圆角骰子，配合底层和顶层的立体阴影，为用户完美提供线下抓牌、确定方位用的骰子变幻和激烈振动摇晃动画 -->
+    <div id="diceDialog" class="dialog-overlay hidden">
+      <div class="dialog-card" role="dialog" aria-modal="true">
+        <h3>掷骰子</h3>
+        <!-- 骰子摆放容器 -->
+        <div class="dice-container">
+          <div id="dice1" class="dice">⚀</div>
+          <div id="dice2" class="dice">⚀</div>
+        </div>
+        <div class="dialog-actions">
+          <button id="diceCancel" class="dialog-btn dialog-btn-cancel">关闭</button>
+          <button id="rollDiceBtn" class="dialog-btn dialog-btn-confirm">掷骰子</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 【全局功能弹窗四：结算与排行榜弹窗（初始隐藏：hidden）】
+         点击右上角“结”按钮时弹出此遮罩层。
+         - 步骤 A（确定结算提示）：用于防呆确认，点击确定后自动切入排行榜并一键重置当前局的分数。
+         - 步骤 B（排行榜显示卡片）：纵向优雅展示本局的终极排行，并为大赢家戴上皇冠 👑，垫底大输家发放小丑 🤡 表情 -->
+    <div id="settleDialog" class="dialog-overlay hidden">
+      <!-- 步骤 A：确认结算提示 -->
+      <div id="settleConfirmCard" class="dialog-card">
+        <h3>结算游戏</h3>
+        <p>确定要结算本局游戏吗？结算后将清空积分，并生成本局排行榜。</p>
+        <div class="dialog-actions">
+          <button id="settleCancelBtn" class="dialog-btn dialog-btn-cancel">取消</button>
+          <button id="settleConfirmBtn" class="dialog-btn dialog-btn-confirm" style="background: var(--good); color: #052e16;">确定</button>
+        </div>
+      </div>
+      
+      <!-- 步骤 B：排行榜显示卡片 -->
+      <div id="leaderboardCard" class="dialog-card hidden" style="width: min(480px, 100%);">
+        <h3>本局排行榜</h3>
+        <!-- 榜单纵向滚动列表 -->
+        <div id="leaderboardList" class="leaderboard-list">
+          <!-- 这里由 JS 动态生成名次、头像、昵称和分数 -->
+        </div>
+        <div class="dialog-actions" style="margin-top: 20px; width: 100%;">
+          <button id="leaderboardCloseBtn" class="dialog-btn dialog-btn-cancel" style="background: var(--good); color: #052e16; width: 100%; margin-right: 0 !important;">确认</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 【全局功能：轻量底端滑动通知（Toast）】
+         隐藏在页面最底部。当用户未注册名字点结算，或者在昵称登记漏填、重复名字时，
+         由此容器承载并带着物理弹性（Spring）效果向上滑入弹出警告，随后在 2.5 秒后自动收回 -->
+    <div id="toast" class="toast-container"></div>
+
+    <!-- 挂载控制网页所有功能运转、存取本地缓存、逻辑计算的 JavaScript 代码 -->
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,899 @@
+/* ==========================================================================
+   【1. 全局样式重置与根变量】
+   ========================================================================== */
+
+/* 全局 CSS 变量设定：在这里集中管理整套主题的颜色 */
+:root {
+  color-scheme: dark; /* 通知浏览器使用深色系统样式（如滚动条等） */
+  --bg: #111827; /* 整个页面的深色底色 */
+  --panel: #1f2937; /* 卡片和弹窗的背景底色 */
+  --panel-2: #374151; /* 比面板稍亮一点的背景色，常用于输入框、次要卡片 */
+  --accent: #f59e0b; /* 主强调色（琥珀黄）：用于最高分皇冠、出分人高亮框、主按钮 */
+  --accent-2: #60a5fa; /* 次强调色（天蓝色）：用于输入框激活、头像渐变 */
+  --text: #f9fafb; /* 主文字颜色（接近纯白） */
+  --muted: #9ca3af; /* 辅助/次要文字颜色（灰色） */
+  --good: #34d399; /* 积极颜色（绿色）：正积分展示、安全确认按钮 */
+  --danger: #f87171; /* 警示颜色（红色）：负积分展示、清空/重置类操作按钮 */
+}
+
+/* 浅色模式下的一套 CSS 变量定义，当 body 挂载了 .light-theme 时自动激活 */
+body.light-theme {
+  color-scheme: light; /* 切换为浏览器原生浅色系统样式 */
+  --bg: #f3f4f6; /* 页面的高质感淡灰色底色 */
+  --panel: #ffffff; /* 纯白色主要面板/卡片底色 */
+  --panel-2: #e5e7eb; /* 浅灰色辅助底色，用于输入框和次要按钮 */
+  --text: #111827; /* 深灰黑色文本，保障阳光下阅读的高对比度 */
+  --muted: #4b5563; /* 中灰色文字，用于辅助说明信息 */
+  --good: #34d399; /* 积极颜色（绿色）：正积分展示、安全确认按钮 */
+  --danger: #f87171; /* 警示颜色（红色）：负积分展示、清空/重置类操作按钮 */
+}
+
+/* 盒子模型初始化：确保内边距和边框不会撑大设定的容器尺寸 */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; /* 核心：彻底禁用移动端（安卓及iOS）点击元素时系统默认产生的半透明蓝色高亮方块 */
+}
+
+/* 页面主体样式 */
+body {
+  margin: 0; /* 清除浏览器默认的外边距 */
+  font-family: "Microsoft YaHei", Arial, sans-serif; /* 优先使用微软雅黑字体 */
+  background: linear-gradient(135deg, var(--bg) 0%, var(--panel) 100%); /* 深灰色到深蓝灰色的对角渐变背景 */
+  color: var(--text); /* 默认字色 */
+  min-height: 100vh; /* 保证页面背景至少能占满整个屏幕高度 */
+}
+
+/* 全局清除：所有按钮被点击、聚焦时，系统默认在周围生成的蓝色或发光外边框（Focus Outline） */
+button:focus {
+  outline: none;
+}
+
+/* 主应用居中容器：限制最大宽度，在宽屏上左右留白 */
+.app {
+  max-width: 1100px;
+  margin: 0 auto; /* 左右居中 */
+  padding: 24px; /* 四周边距 */
+}
+
+
+/* ==========================================================================
+   【2. 头部标题区域（Hero Header）】
+   ========================================================================== */
+
+/* 头部条：两端对齐，中间留空 */
+.hero {
+  display: flex;
+  justify-content: space-between; /* 标题居左，操作按钮行居右 */
+  align-items: center; /* 垂直居中对齐 */
+  flex-wrap: wrap; /* 允许自动弹性换行 */
+  gap: 16px; /* 元素间距，在宽度不够时自动充当一个按键的宽度 */
+  margin-bottom: 20px;
+}
+
+/* 头部右侧的操作按钮容器，保证切换和重置横向优雅对齐 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 主题与掷骰子切换按钮专属圆形精致高阶外观 */
+.theme-btn {
+  font-size: 0.9rem;
+  padding: 0;
+  padding-bottom: 2px; /* 核心对齐补丁：由于微软雅黑字形天然下沉，微调底部边距 2px 即可完美抵消，实现绝对居中 */
+  width: 44px;
+  height: 44px;
+  display: flex; /* 改用 flex 弹性布局进行更精确的控制 */
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* 强制消除字体默认的多余行高间距 */
+  background: var(--panel-2); /* 自动适配深浅皮肤 */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+/* 悬停微动效 */
+.theme-btn:hover {
+  transform: scale(1.05); /* 轻微放大 */
+  background: rgba(255, 255, 255, 0.15); /* 产生高亮反馈 */
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* 标题上方的小字母（通常显示项目所属团队或作者名） */
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent); /* 使用主强调色 */
+  text-transform: uppercase; /* 英文字母大写 */
+  letter-spacing: 0.2em; /* 字间距放宽，使其看起来更有设计感 */
+  font-size: 0.8rem;
+}
+
+/* 清除常见排版标签的默认外边距，改由父容器统筹 */
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* 标题下方副标题的样式 */
+.subtitle {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+
+/* ==========================================================================
+   【3. 通用卡片面板（Panel Container）】
+   ========================================================================== */
+
+/* 所有主要功能区共享的高级卡片容器 */
+.panel {
+  background: var(--panel); /* 自动随深浅色自适应 */
+  border: 1px solid rgba(255, 255, 255, 0.08); /* 极细的半透明白色边框，增加物理立体边缘线 */
+  border-radius: 20px; /* 大圆角 */
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); /* 柔和的大阴影，使卡片悬浮于背景之上 */
+  margin-bottom: 18px;
+}
+
+
+/* ==========================================================================
+   【4. 准备阶段/玩家登记表单区域】
+   ========================================================================== */
+
+/* 登记表单内部布局 */
+.registration-form {
+  display: flex;
+  flex-direction: column; /* 垂直向下排列 */
+  gap: 16px; /* 每一行的间距 */
+}
+
+/* 步骤大标题 */
+.step-title {
+  font-size: 1.35rem;
+  margin-bottom: 12px;
+}
+
+/* 注册阶段底部的操作按钮行 */
+.registration-actions {
+  display: flex;
+  justify-content: space-between; /* 上一步居左，下一步居右 */
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* 人数选择阶段的横向输入排版 */
+.player-count-step {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap; /* 强行不换行 */
+}
+
+/* 选择人数输入框的特殊宽度与居中样式 */
+.count-input {
+  width: 80px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  text-align: center; /* 文本居中 */
+}
+
+/* 错误提示框：例如昵称重复或为空时弹出 */
+.registration-error {
+  background: rgba(248, 113, 113, 0.1); /* 微弱的半透明红底 */
+  border: 1px solid rgba(248, 113, 113, 0.3); /* 浅红色警示边框 */
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fca5a5; /* 淡粉色文字，保证暗光环境可读性 */
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+/* 隐藏错误框的辅助类 */
+.registration-error.hidden {
+  display: none;
+}
+
+/* 玩家昵称输入框的网格布局：2列并排 */
+.inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* 每一个昵称输入框和上面的文字提示（“玩家1”等） */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+
+/* ==========================================================================
+   【5. 基础表单输入控件与按钮】
+   ========================================================================== */
+
+/* 全局输入框通用样式 */
+input {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--panel-2); /* 自动适配深浅背景 */
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+/* 输入框获得鼠标焦点时的发光动画效果 */
+input:focus {
+  outline: 2px solid rgba(96, 165, 250, 0.45); /* 蓝色半透明外光晕 */
+  border-color: var(--accent-2); /* 边框变成蓝色 */
+}
+
+/* 基础按钮统一样式 */
+.primary-btn,
+.secondary-btn {
+  border: none;
+  border-radius: 999px; /* 胶囊圆角 */
+  padding: 10px 16px;
+  font-size: 1rem;
+  cursor: pointer; /* 鼠标悬浮呈手型 */
+}
+
+/* 主操作按钮（带渐变琥珀黄色，代表最瞩目的操作） */
+.primary-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, #fbbf24 100%);
+  color: #111827; /* 黄底上使用深色字，保持高对比度 */
+  font-weight: 700;
+  align-self: flex-start; /* 阻止块级拉伸，使其随字数自适应宽度 */
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* 次要操作按钮（淡灰色半透明背景，不喧宾夺主） */
+.secondary-btn {
+  background: var(--panel-2); /* 自动适配深浅背景 */
+  color: var(--text);
+}
+
+/* ==========================================================================
+   【6. 模态弹窗系统（重置询问、转分输入）】
+   ========================================================================== */
+
+/* 全屏遮罩层：使后面的游戏页面变暗变虚 */
+.dialog-overlay {
+  position: fixed;
+  inset: 0; /* 铺满四周 */
+  background: rgba(0, 0, 0, 0.55); /* 半透明黑底 */
+  display: grid;
+  place-items: center; /* 内容绝对水平垂直居中 */
+  padding: 20px;
+  z-index: 1000; /* 确保悬浮在所有页面最上层 */
+}
+
+/* 弹窗实体卡片 */
+.dialog-card {
+  width: min(440px, 100%); /* 最大宽度440px，在手机上自动自适应 */
+  min-height: 180px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 浅色主题适配：将白边框和重投影转化为淡雅阴影 */
+body.light-theme .dialog-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-card h3 {
+  margin: 0 0 8px;
+}
+
+/* 弹窗内的提示内容文字 */
+.dialog-card p {
+  color: var(--muted);
+  margin: 0 0 18px;
+  min-height: 44px;
+  display: flex;
+  align-items: center; /* 文字内容垂直居中 */
+}
+
+/* 输入转账分数的特殊输入行组 */
+.amount-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.amount-input-group label {
+  min-width: 80px; /* 固定左边标签的宽度防止错位 */
+  color: var(--muted);
+  margin: 0;
+}
+
+.amount-input-group input {
+  flex: 1; /* 撑满剩余的所有右侧空间 */
+  min-width: 120px;
+}
+
+/* 弹窗按钮组外容器 */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end; /* 按钮靠右对齐 */
+  gap: 10px;
+  margin-top: auto; /* 自动把按钮群推至弹窗的最底部 */
+}
+
+/* 选择重置模式阶段的排版：左右分散 */
+.dialog-actions-choice {
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* 弹窗内部专用按钮基础设定 */
+.dialog-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  min-width: 108px; /* 设定最小宽度，避免文字不同导致按钮宽窄不一 */
+}
+
+/* 取消按钮（使用绿色，给用户心理安全暗示） */
+.dialog-btn-cancel {
+  background: #34d399;
+  color: #052e16;
+  margin-right: auto; /* 如果有其他按钮在右，它能独自被推到最左侧 */
+}
+
+/* 危险操作确认按钮（红色） */
+.dialog-btn-confirm {
+  background: var(--danger);
+  color: #111827;
+}
+
+/* 重置房间按钮（红色） */
+.dialog-btn-room {
+  background: var(--danger);
+  color: #111827;
+}
+
+/* 重置分数按钮（红色） */
+.dialog-btn-score {
+  background: var(--danger);
+  color: #111827;
+}
+
+
+/* ==========================================================================
+   【7. 工具类辅助（Utility Class）】
+   ========================================================================== */
+
+/* 用于动态隐藏任何不需要显示在屏幕上的 HTML 元素 */
+.hidden {
+  display: none;
+}
+
+
+/* ==========================================================================
+   【8. 游戏主界面：玩家卡片网格区域】
+   ========================================================================== */
+
+/* 行级控制：包含出分人当前提示语 */
+.controls-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.player-info-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0;
+}
+
+/* 玩家卡片排版：2列平分 */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* 玩家信息独立卡片（最重要的交互按钮） */
+.player-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.7);
+  display: flex;
+  align-items: center; /* 头像与右侧信息水平对齐 */
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease; /* 顺滑的动效过渡 */
+  position: relative; /* 为绝对定位的皇冠提供坐标基准 */
+  min-height: 82px;
+  text-align: left; 
+}
+
+/* 浅色主题适配：调整玩家卡片的默认物理质感与浅色卡片背景 */
+body.light-theme .player-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(243, 244, 246, 0.6); /* 使用淡灰色的轻微不透明度，保持磨砂质感 */
+}
+
+/* 悬停卡片时的浮动反馈 */
+.player-card:hover {
+  transform: translateY(-2px); /* 卡片轻微往上漂浮 */
+  border-color: rgba(96, 165, 250, 0.6); /* 边框略微亮起浅蓝色 */
+}
+
+/* 浅色主题适配悬停 */
+body.light-theme .player-card:hover {
+  border-color: rgba(96, 165, 250, 0.8);
+}
+
+/* 当此卡片被选为“当前出分人”时的状态 */
+.player-card.active {
+  border-color: var(--accent); /* 边框变成高亮的琥珀黄 */
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.4); /* 内侧淡黄发光 */
+}
+
+body.light-theme .player-card.active {
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.2);
+}
+
+/* 当卡片被选为目标接收人时的状态 */
+.player-card.target {
+  border-color: var(--good); /* 绿色边框 */
+}
+
+/* 大赢家头顶的皇冠图标定位：卡片右上角 */
+.crown-icon {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 1.2rem;
+}
+
+/* 玩家头像：圆圈，带高级粉紫渐变 */
+.avatar {
+  width: 50px;
+  height: 50px;
+  min-width: 50px; /* 强行固定像素防止在窄屏被挤压变形 */
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c9708b 0%, #6e6ec1 100%); /* 粉紫/靛蓝高级暖色渐变 */
+  display: grid;
+  place-items: center; /* 昵称首字母在圈子中央居中 */
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #ffffff; /* 渐变色底上统一使用白色，保障极佳的反差 */
+  flex-shrink: 0; /* 防止弹性布局强行压缩 */
+}
+
+/* 卡片内部右侧的详情外包 */
+.player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0; /* 配合破词换行：允许文本容器在极端小屏压缩 */
+  flex: 1;
+}
+
+.player-info strong {
+  word-break: break-word; /* 昵称过长时自动破行展示 */
+  font-size: 0.95rem;
+}
+
+/* 积分展示胶囊标签 */
+.score-badge {
+  display: inline-flex;
+  align-self: flex-start; /* 自适应宽度 */
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d1d5db;
+  font-size: 0.9rem;
+}
+
+/* 浅色主题下的胶囊配色调整，提高底色能见度 */
+body.light-theme .score-badge {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* 正积分时的文字颜色（绿色） */
+.score-positive {
+  color: var(--good);
+}
+
+/* 负积分时的文字颜色（红色） */
+.score-negative {
+  color: var(--danger);
+}
+
+/* 牌局下方的灰色操作提示语 */
+.tips {
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+
+/* ==========================================================================
+   【9. 积分明细/流水记录历史面板】
+   ========================================================================== */
+
+/* 流水头部：标题与右侧记录条数统计 */
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* 流水列表总容器 */
+.log-list {
+  list-style: none; /* 去掉默认列表圆点 */
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 每一个独立的流水分组卡片（2分钟内归为一组） */
+.log-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 浅色主题下的流水分组卡片外观微调 */
+body.light-theme .log-item {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* 流水记录元信息：例如显示记录的时间戳 */
+.log-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+/* 每一个分组内的多笔流水的包装盒（横向自动换行折行） */
+.transfer-group {
+  display: flex;
+  flex-wrap: wrap; /* 超出宽度自动挤到下一行 */
+  gap: 12px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+/* 具体的某一次给分项（例如：“玩家A → 玩家B 5分”） */
+.transfer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05); /* 极为微弱的淡灰色背景 */
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* 浅色主题下的具体转分项微调（使用高对比度的淡灰色） */
+body.light-theme .transfer-item {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.transfer-text {
+  white-space: nowrap; /* 拒绝在名字和箭头中间强行换行 */
+}
+
+/* 分数金额，高亮显眼 */
+.transfer-amount {
+  color: var(--accent); /* 标志性的琥珀色 */
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 某一个时间节点时，全局所有人的积分状态文字说明 */
+.current-scores {
+  color: #d1d5db;
+}
+
+body.light-theme .current-scores {
+  color: #4b5563;
+}
+
+.current-score-text {
+  color: #d1d5db;
+}
+
+body.light-theme .current-score-text {
+  color: #4b5563;
+}
+
+
+/* ==========================================================================
+   【10. 掷骰子专属实感与物理动画系统】
+   ========================================================================== */
+
+/* 骰子盒子并列布局 */
+.dice-container {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 30px 0;
+}
+
+/* 3D磨砂微弧度实体骰子 */
+.dice {
+  width: 82px;
+  height: 82px;
+  background: #ffffff; /* 经典的白骰子 */
+  color: #1e293b; /* 默认黑色/蓝色点数 */
+  border-radius: 18px; /* 圆润可爱的角 */
+  display: flex; /* 改用 flex 弹性盒子，方便微调物理对齐 */
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* 强制行高为 1，消除多余的默认字高 */
+  font-size: 3.8rem; /* 适当减小字号，给上下留出调整和缓冲空间 */
+  padding-bottom: 8px; /* 抵消 Unicode 符号天生下沉的像素，实现绝对居中 */
+  /* 精致的多层立体投影 */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 
+              inset 0 -4px 6px rgba(0, 0, 0, 0.12), 
+              inset 0 4px 6px rgba(255, 255, 255, 0.5);
+  user-select: none;
+}
+
+/* 真实高频剧烈振动震荡摇晃动画 */
+@keyframes dice-shake {
+  0% { transform: translate(2px, 1px) rotate(0deg); }
+  10% { transform: translate(-1px, -2px) rotate(-3deg); }
+  20% { transform: translate(-3px, 0px) rotate(3deg); }
+  30% { transform: translate(0px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(3deg); }
+  50% { transform: translate(-1px, 2px) rotate(-3deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(2px, 1px) rotate(-3deg); }
+  80% { transform: translate(-1px, -1px) rotate(3deg); }
+  90% { transform: translate(2px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-3deg); }
+}
+
+/* 当骰子被挂载 .rolling 状态时，执行无限循环的高频振动摇晃 */
+.dice.rolling {
+  animation: dice-shake 0.1s infinite;
+}
+
+
+/* ==========================================================================
+   【11. 移动端/小屏响应式适配适配】
+   ========================================================================== */
+
+/* 当屏幕最大宽度小于 750 像素时激活 */
+@media (max-width: 750px) {
+  
+  /* 强制把昵称登记输入的 2 列、牌局面板的 2 列卡片改成单列排版，方便手机上用大拇指单手点按 */
+  .inputs-grid,
+  .players-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* 头部栏、流程行、日志头强制切换为垂直向下堆叠，防止由于横向过窄发生严重的文本挤压或移位 */
+  .controls-row,
+  .logs-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* 窄屏下头部操作按钮靠右对齐 */
+  .header-actions {
+    align-self: flex-end;
+    margin-top: 10px;
+  }
+}
+
+
+/* ==========================================================================
+   【12. 极端窄屏深度适配】
+   ========================================================================== */
+
+/* 当屏幕最大宽度小于 450 像素时激活 */
+@media (max-width: 450px) {
+  /* 1. 减少应用外边距，为核心内容腾出充足空间 */
+  .app {
+    padding: 12px;
+  }
+
+  /* 2. 压缩主面板内边距与圆角 */
+  .panel {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  /* 3. 压缩玩家卡片，赋予其自收缩能力，绝不撑爆面板 */
+  .player-card {
+    padding: 10px;
+    gap: 8px;
+    min-height: 70px;
+    min-width: 0; /* 允许卡片压缩 */
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    font-size: 1rem;
+  }
+
+  .player-info strong {
+    font-size: 0.85rem;
+  }
+
+  .score-badge {
+    padding: 2px 6px;
+    font-size: 0.8rem;
+  }
+
+  /* 4. 弹窗卡片宽度限制与防撑爆 */
+  .dialog-card {
+    padding: 16px; /* 适当压缩弹窗内填充 */
+  }
+
+  /* 5. 取消弹窗按钮的固定最小宽度限制，允许其在窄屏下安全缩窄 */
+  .dialog-btn {
+    min-width: 0;
+    width: auto;
+    flex: 1; /* 两个按钮（如转分、重置确认）会自动等分宽度，完美契合 */
+  }
+
+  /* 6. 针对有 3 个选项的重置选项弹窗，窄屏下由并排改为纵向堆叠，体验最佳 */
+  .dialog-actions-choice {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .dialog-actions-choice .dialog-btn {
+    width: 100%;
+    margin-right: 0 !important; /* 清除“取消”键原本靠左的 margin-right */
+  }
+}
+
+/* ==========================================================================
+   【13. 结算排行榜系统专属样式】
+   ========================================================================== */
+
+/* 纵向榜单排列容器：当人数很多（比如8人）超出高度时，自动开启精致滚动条 */
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+  max-height: 380px; /* 限制最大高度，自动适应人数 */
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* 纵向滚动条精致美化 */
+.leaderboard-list::-webkit-scrollbar {
+  width: 6px;
+}
+.leaderboard-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 99px;
+}
+body.light-theme .leaderboard-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* 榜单内单个玩家的名片 */
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  position: relative;
+}
+
+/* 浅色主题下的榜单名片适配 */
+body.light-theme .leaderboard-item {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 名次展示：高亮黄色字 */
+.leaderboard-rank {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: var(--accent); /* 标志性的琥珀黄色 */
+  min-width: 64px; /* 固定名次宽度，保证后面的头像昵称能完美对齐 */
+}
+
+/* 头像微调 */
+.leaderboard-avatar {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  font-size: 1rem;
+}
+
+/* 头像右侧姓名与分数：名字居左，积分胶囊居右 */
+.leaderboard-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* 名字贴左，积分胶囊推到最右侧 */
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.leaderboard-info strong {
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+/* 皇冠和小丑图标的大小 */
+.leaderboard-badge-icon {
+  font-size: 1.35rem;
+  margin-left: 8px;
+}
+
+/* ==========================================================================
+   【14. 全局轻量顶端滑动通知（Toast）专属样式】
+   ========================================================================== */
+.toast-container {
+  position: fixed;
+  bottom: -60px; /* 默认隐藏在屏幕下方视口以外 */
+  left: 50%;
+  transform: translateX(-50%); /* 水平方向绝对对齐屏幕中央 */
+  background: var(--danger); /* 深色模式下为警示红色 */
+  color: #111827; /* 黑色字 */
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 99px; /* 完美的胶囊圆角 */
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); /* 阴影改为朝上方倾斜，更有地部卡片的悬浮感 */
+  z-index: 2500; /* 确保层级悬浮在一切模态弹窗和遮罩的最上方 */
+  opacity: 0;
+  pointer-events: none; /* 隐藏时不拦截底层的鼠标点击和操作 */
+  transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+}
+
+/* 激活状态：向下抽屉式滑入 24 像素并淡入 */
+.toast-container.show {
+  bottom: 24px;
+  opacity: 1;
+}
+
+/* 浅色（白昼）模式下的通知配色自适应 */
+body.light-theme .toast-container {
+  color: #ffffff;      /* 白色字 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
