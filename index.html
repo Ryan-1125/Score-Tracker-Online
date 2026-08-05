@@ -74,7 +74,7 @@
               <input id="profileNameInput" type="text" maxlength="8" placeholder="输入昵称" value="" />
             </div>
           </div>
-          <p class="mode-hint">选择“本地模式”或“联机模式”，系统会自动记住你的昵称。</p>
+          <p class="mode-hint">选择本地模式或联机模式</p>
           <div class="mode-actions">
             <button id="localModeBtn" class="primary-btn">本地模式</button>
             <button id="onlineModeBtn" class="primary-btn">联机模式</button>
@@ -121,7 +121,7 @@
           <div class="room-card room-card-join">
             <h3>我要进房</h3>
             <div class="room-card-row">
-              <input id="joinRoomCodeInput" type="text" placeholder="4位房间码" maxlength="4" />
+              <input id="joinRoomCodeInput" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="4位房间码" maxlength="4" />
               <button id="joinRoomBtn" class="primary-btn">加入房间</button>
             </div>
           </div>

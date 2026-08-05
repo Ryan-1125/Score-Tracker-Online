@@ -123,8 +123,8 @@ function setRoomActionLoading(action, isLoading) {
 }
 
 function normalizeRoomCode(code) {
-  // 允许字母与数字，自动大写，兼容历史房间码（字母或数字）
-  return String(code).replace(/[^0-9A-Za-z]/g, '').slice(0, 4).toUpperCase();
+  // 只保留数字并截取前 4 位（确保输入框仅显示数字）
+  return String(code).replace(/\D/g, '').slice(0, 4);
 }
 
 function updateRoomInfoBox() {
@@ -153,8 +153,8 @@ function updateRoomInfoBox() {
 }
 
 function isValidRoomCode(value) {
-  // 接受 4 位数字或字母数字混合的旧房间码
-  return /^[0-9A-Za-z]{4}$/.test(value);
+  // 仅接受 4 位数字房间码
+  return /^[0-9]{4}$/.test(value);
 }
 
 function saveOnlineState() {
@@ -487,7 +487,7 @@ function loadState() {
       }
     }
   } catch (error) {
-    console.warn('读取本地存储失败，已忽略。', error);
+    console.warn('读取本地存储失败。', error);
   }
 }
 
@@ -901,7 +901,7 @@ createRoomBtn.addEventListener('click', () => {
     return;
   }
   if (!socket.connected) {
-    showToast('正在连接服务器，请稍候后再试。');
+    showToast('正在连接服务器，请稍后再试。');
     return;
   }
   setRoomActionLoading('create', true);
@@ -926,7 +926,7 @@ joinRoomBtn.addEventListener('click', () => {
     return;
   }
   if (!socket.connected) {
-    showToast('正在连接服务器，请稍候后再试。');
+    showToast('正在连接服务器，请稍后再试。');
     return;
   }
   setRoomActionLoading('join', true);
@@ -1140,7 +1140,7 @@ socket.on('room-created', ({ roomCode, hostName, players, logs }) => {
   state.logs = logs;
   state.selectedPlayerId = null;
   state.pendingTransferTargetId = null;
-  setConnectionStatus(`联机模式 [${roomCode}] - 你是房主`, 'online');
+  setConnectionStatus(`联机模式 [房间号:${roomCode}] - 你是房主`, 'online');
   updateRoomInfoBox();
   roomInfoBox.classList.remove('hidden');
   modePanel.classList.add('hidden');
@@ -1172,7 +1172,7 @@ socket.on('room-state', ({ roomCode, hostName, hostId, players, logs }) => {
   state.pendingTransferTargetId = null;
   updateRoomInfoBox();
   roomInfoBox.classList.remove('hidden');
-  setConnectionStatus(`联机模式 [${roomCode}]`, 'online');
+  setConnectionStatus(`联机模式 [房间号:${roomCode}]`, 'online');
   modePanel.classList.add('hidden');
   roomPanel.classList.add('hidden');
   countPanel.classList.add('hidden');
