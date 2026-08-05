@@ -10,6 +10,8 @@ const nicknamePanel = document.getElementById('nicknamePanel');
 const playerCountInput = document.getElementById('playerCountInput');
 const nextStepBtn = document.getElementById('nextStepBtn');
 const backToCountBtn = document.getElementById('backToCountBtn');
+const countBackBtn = document.getElementById('countBackBtn');
+const roomBackBtn = document.getElementById('roomBackBtn');
 const playerNameInputs = document.getElementById('playerNameInputs');
 const gamePanel = document.getElementById('gamePanel');
 const logsPanel = document.getElementById('logsPanel');
@@ -57,10 +59,28 @@ const leaderboardCard = document.getElementById('leaderboardCard');
 const leaderboardList = document.getElementById('leaderboardList');
 const leaderboardCloseBtn = document.getElementById('leaderboardCloseBtn');
 
+const createRoomBtn = document.getElementById('createRoomBtn');
+const joinRoomBtn = document.getElementById('joinRoomBtn');
+const joinRoomCodeInput = document.getElementById('joinRoomCodeInput');
+const roomInfoBox = document.getElementById('roomInfoBox');
+const roomStatusText = document.getElementById('roomStatusText');
+const modePanel = document.getElementById('modePanel');
+const roomPanel = document.getElementById('roomPanel');
+const localModeBtn = document.getElementById('localModeBtn');
+const onlineModeBtn = document.getElementById('onlineModeBtn');
+const profileNameInput = document.getElementById('profileNameInput');
+const profileAvatar = document.getElementById('profileAvatar');
 // 玩家数据、流水等信息的本地浏览器磁盘缓存键名 (LocalStorage Key)
 const storageKey = 'mahjong-scoreboard-state';
+const onlineStorageKey = 'mahjong-scoreboard-online';
 // 皮肤主题（深色/浅色）的本地缓存键名
+const modeStorageKey = 'mahjong-scoreboard-mode';
 const themeStorageKey = 'mahjong-scoreboard-theme';
+
+const socket = window.io ? window.io() : {
+  on: () => {},
+  emit: () => {},
+};
 
 // 全局核心状态机：保存整局游戏所有运行中的数据，是整个应用的单一数据源
 let state = {
@@ -69,6 +89,71 @@ let state = {
   pendingTransferTargetId: null, // 当前处于等待输入金额状态的赢家/接收人唯一 ID
   logs: [],                  // 存放计分变动的历史流水记录对象数组
 };
+
+let roomInfo = {
+  roomCode: null,
+  hostName: null,
+  isHost: false,
+  connected: false,
+};
+
+let currentMode = localStorage.getItem(modeStorageKey) || 'idle';
+
+function syncProfilePreview() {
+  const name = (profileNameInput.value || '').trim();
+  const firstChar = Array.from(name)[0] || '?';
+  profileAvatar.textContent = firstChar;
+}
+
+function saveOnlineState() {
+  const name = profileNameInput.value.trim();
+  if (!roomInfo.roomCode || !name) return;
+  localStorage.setItem(onlineStorageKey, JSON.stringify({
+    roomCode: roomInfo.roomCode,
+    playerName: name,
+    mode: 'online',
+  }));
+}
+
+function loadOnlineState() {
+  try {
+    const raw = localStorage.getItem(onlineStorageKey);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn('读取联机会话状态失败', error);
+    return null;
+  }
+}
+
+function clearOnlineState() {
+  localStorage.removeItem(onlineStorageKey);
+}
+
+function restoreModePanel() {
+  const savedMode = localStorage.getItem(modeStorageKey);
+  if (savedMode === 'local') {
+    currentMode = 'local';
+    roomStatusText.textContent = '本地模式';
+    roomStatusText.style.visibility = 'visible';
+    modePanel.classList.add('hidden');
+    countPanel.classList.remove('hidden');
+    roomPanel.classList.add('hidden');
+  } else if (savedMode === 'online') {
+    currentMode = 'online';
+    roomStatusText.textContent = '联机模式';
+    roomStatusText.style.visibility = 'visible';
+    modePanel.classList.add('hidden');
+    roomPanel.classList.remove('hidden');
+    countPanel.classList.add('hidden');
+  }
+}
+
+function updateHeaderControls() {
+  const showControls = currentMode === 'local' || (currentMode === 'online' && roomInfo.isHost && Boolean(roomInfo.roomCode));
+  resetBtn.classList.toggle('hidden', !showControls);
+  settleBtn.classList.toggle('hidden', !showControls);
+}
 
 // 重置操作的临时状态标记
 let pendingResetMode = null; // 标记用户点击了何种重置方式：'room'（整房重置） 或 'score'（仅清零分数）
@@ -191,31 +276,18 @@ function confirmReset() {
     return;
   }
 
-  // 模式一：彻底重置房间。清除所有运行数据并倒回至第一步“人数选择”首屏
-  if (pendingResetMode === 'room') {
-    state = { players: [], selectedPlayerId: null, pendingTransferTargetId: null, logs: [] };
-    localStorage.removeItem(storageKey); // 抹除浏览器本地磁盘缓存
-    registrationForm.reset();            // 彻底清空表单中残留的人名输入内容
-    countPanel.classList.remove('hidden'); // 显示第一步
-    nicknamePanel.classList.add('hidden'); // 隐藏后面所有面板
-    gamePanel.classList.add('hidden');
-    logsPanel.classList.add('hidden');
-    renderLogs();                          // 重新生成清空状态下的空白界面
-    renderPlayers();
-  } 
-  // 模式二：仅重设分数。保留所有玩家昵称和房间信息，只把积分彻底归零并抹除记账历史日志
-  else if (pendingResetMode === 'score') {
-    if (state.players.length) {
-      state.players = state.players.map((player) => ({ ...player, score: 0 }));
-      state.logs = [];
-      state.selectedPlayerId = null;
-      state.pendingTransferTargetId = null;
-      saveState(); // 同步保存数据并写入浏览器缓存
-      render();    // 进行一轮全局界面重渲染
-    }
+  if (!roomInfo.roomCode) {
+    closeDialog();
+    return;
   }
 
-  closeDialog(); // 执行关闭退出
+  if (pendingResetMode === 'room') {
+    socket.emit('reset-room', { roomCode: roomInfo.roomCode });
+  } else if (pendingResetMode === 'score') {
+    socket.emit('reset-room', { roomCode: roomInfo.roomCode });
+  }
+
+  closeDialog();
 }
 
 
@@ -254,53 +326,52 @@ function showCountStep() {
 
 // 开始记分表单验证：深度校验输入框合法性并正式将玩家注册进入状态机
 function registerPlayers(event) {
-  event.preventDefault(); // 阻止表单默认的提交刷新网页行为
+  event.preventDefault();
 
-  const formData = new FormData(registrationForm); // 实时读取并封装表单数据
+  const formData = new FormData(registrationForm);
   const count = Math.max(2, Math.min(8, Number(playerCountInput.value) || 4));
   const names = Array.from({ length: count }, (_, index) => {
     const value = String(formData.get(`player${index + 1}`) || '').trim();
     return value;
   });
 
-  // 校验一：任何一位参与玩家的昵称都不允许留空
   const emptyIndex = names.findIndex((name) => !name);
   if (emptyIndex !== -1) {
-    showToast(`玩家${emptyIndex + 1} 昵称不能为空。`); // 直接触发底部轻量向滑出通知提示
+    showToast(`玩家${emptyIndex + 1} 昵称不能为空。`);
     return;
   }
 
   const filteredNames = names.filter(Boolean);
-
-  // 校验二：确保已输入姓名个数与设定的总人数严格对齐
   if (filteredNames.length !== count) {
     showToast(`请完整填写 ${count} 位玩家昵称。`);
     return;
   }
 
-  // 校验三：玩家昵称不允许发生重复冲突（否则算账流水将无法区分）
   const uniqueNames = [...new Set(filteredNames)];
   if (uniqueNames.length !== count) {
     showToast('昵称不能重复。');
     return;
   }
 
-  // 验证无误，将所有人正式注册，初始化各自底分积分为 0 并派发唯一 ID 标识
   state.players = names.map((name, index) => ({
     id: `p${index + 1}`,
     name,
     score: 0,
   }));
   state.selectedPlayerId = null;
-  state.logs = []; // 属于该新房间的新流水日志初始化
-  saveState();     // 写入浏览器缓存
+  state.logs = [];
 
-  // 界面状态流转：隐藏准备阶段大厅，亮起打牌过程控制台及账目历史
+  if (currentMode === 'local') {
+    saveState();
+    roomStatusText.textContent = '本地模式';
+    roomStatusText.style.visibility = 'visible';
+  }
   countPanel.classList.add('hidden');
   nicknamePanel.classList.add('hidden');
   gamePanel.classList.remove('hidden');
   logsPanel.classList.remove('hidden');
-  render(); // 进行首次全局界面渲染
+  updateHeaderControls();
+  render();
 }
 
 
@@ -322,19 +393,61 @@ function loadState() {
         selectedPlayerId: parsed.selectedPlayerId || null,
         logs: parsed.logs,
       };
+      if (parsed.mode === 'local') {
+        currentMode = 'local';
+      }
     }
   } catch (error) {
     console.warn('读取本地存储失败，已忽略。', error);
   }
 }
 
-// 核心同步机：将当前内存中的运行时状态 state 同步写入浏览器磁盘存储中
+// 核心同步机：将当前内存中的运行时状态 state 同步写入浏览器磁盘存储中（仅本地模式
 function saveState() {
-  localStorage.setItem(storageKey, JSON.stringify(state));
+  if (currentMode !== 'local') {
+    return;
+  }
+
+  if (!state.players.length) {
+    localStorage.removeItem(storageKey);
+    return;
+  }
+
+  const payload = {
+    mode: 'local',
+    players: state.players,
+    selectedPlayerId: state.selectedPlayerId,
+    logs: state.logs,
+  };
+  localStorage.setItem(storageKey, JSON.stringify(payload));
 }
 
 // 唤起重置弹窗操作
 function resetRoom() {
+  if (currentMode === 'local') {
+    state.players = [];
+    state.logs = [];
+    state.selectedPlayerId = null;
+    state.pendingTransferTargetId = null;
+    saveState();
+    currentMode = 'idle';
+    modePanel.classList.remove('hidden');
+    countPanel.classList.add('hidden');
+    nicknamePanel.classList.add('hidden');
+    roomPanel.classList.add('hidden');
+    gamePanel.classList.add('hidden');
+    logsPanel.classList.add('hidden');
+    roomStatusText.textContent = '';
+    roomStatusText.style.visibility = 'hidden';
+    updateHeaderControls();
+    render();
+    return;
+  }
+
+  if (!roomInfo.roomCode) {
+    showToast('请先创建或加入房间。');
+    return;
+  }
   openResetDialog();
 }
 
@@ -346,7 +459,6 @@ function resetRoom() {
 function transferScore(targetId, amount) {
   if (!state.players.length) return;
 
-  // 1) 抓取出分人对象
   const actor = state.players.find((player) => player.id === state.selectedPlayerId);
   if (!actor) {
     state.selectedPlayerId = null;
@@ -354,35 +466,30 @@ function transferScore(targetId, amount) {
     return;
   }
 
-  // 2) 抓取目标接收人（赢家）对象，防止出现自己转给自己等非法操作
   const target = state.players.find((player) => player.id === targetId);
   if (!target || target.id === actor.id) return;
 
-  // 3) 执行核心数学计算：出分人扣分，接收人加分
-  actor.score -= amount;
-  target.score += amount;
+  if (currentMode === 'online') {
+    if (!roomInfo.roomCode) return;
+    socket.emit('transfer-score', {
+      roomCode: roomInfo.roomCode,
+      fromId: actor.id,
+      toId: target.id,
+      amount,
+    });
+  } else {
+    actor.score -= amount;
+    target.score += amount;
+    state.logs.unshift({
+      time: new Date().toISOString(),
+      transfers: [{ from: actor.name, to: target.name, amount }],
+      currentScores: state.players.map((player) => ({ name: player.name, score: player.score })),
+    });
+    saveState();
+  }
 
-  // 4) 生成符合当前系统时区规范的交易发生时间戳文字
-  const now = new Date();
-  const timestamp = now.toLocaleString('zh-CN', {
-    hour12: false,
-  });
-
-  // 5) 创建一笔账单流水记录，并将该记录推至流水链表的最顶端 (unshift)
-  state.logs.unshift({
-    id: `${now.getTime()}`, // 使用时间戳毫秒数作为日志的物理主键和排序权重
-    timestamp,
-    from: actor.name,
-    to: target.name,
-    amount,
-    fromScore: actor.score,
-    toScore: target.score,
-  });
-
-  // 6) 流水流转完成，安全重置临时选人状态，保存最新的 state 并重新调度界面渲染
   state.selectedPlayerId = null;
   state.pendingTransferTargetId = null;
-  saveState();
   render();
 }
 
@@ -650,7 +757,72 @@ function render() {
 registrationForm.addEventListener('submit', registerPlayers); // 登记名字表单提交
 nextStepBtn.addEventListener('click', showNicknameStep);     // 选择人数点“下一步”
 backToCountBtn.addEventListener('click', showCountStep);     // 填写昵称点“上一步”
+countBackBtn.addEventListener('click', () => {
+  modePanel.classList.remove('hidden');
+  countPanel.classList.add('hidden');
+  roomPanel.classList.add('hidden');
+  nicknamePanel.classList.add('hidden');
+  roomStatusText.style.visibility = 'hidden';
+});
+roomBackBtn.addEventListener('click', () => {
+  modePanel.classList.remove('hidden');
+  roomPanel.classList.add('hidden');
+  countPanel.classList.add('hidden');
+  nicknamePanel.classList.add('hidden');
+  roomStatusText.style.visibility = 'hidden';
+});
 playerCountInput.addEventListener('input', renderPlayerNameInputs); // 人数框数值改变
+profileNameInput.addEventListener('input', syncProfilePreview);
+localModeBtn.addEventListener('click', () => {
+  currentMode = 'local';
+  localStorage.setItem(modeStorageKey, 'local');
+  roomInfo = { roomCode: null, hostName: null, isHost: false, connected: false };
+  roomInfoBox.classList.add('hidden');
+  roomStatusText.textContent = '本地模式';
+  roomStatusText.style.visibility = 'visible';
+  updateHeaderControls();
+  modePanel.classList.add('hidden');
+  countPanel.classList.remove('hidden');
+  roomPanel.classList.add('hidden');
+  syncProfilePreview();
+});
+onlineModeBtn.addEventListener('click', () => {
+  currentMode = 'online';
+  localStorage.setItem(modeStorageKey, 'online');
+  roomInfoBox.classList.add('hidden');
+  roomStatusText.textContent = '联机模式';
+  roomStatusText.style.visibility = 'visible';
+  modePanel.classList.add('hidden');
+  roomPanel.classList.remove('hidden');
+  countPanel.classList.add('hidden');
+  updateHeaderControls();
+  syncProfilePreview();
+});
+createRoomBtn.addEventListener('click', () => {
+  const name = profileNameInput.value.trim();
+  if (!name) {
+    showToast('请输入你的昵称。');
+    return;
+  }
+  if (!socket) {
+    showToast('服务器连接未准备好，请刷新页面。');
+    return;
+  }
+  socket.emit('create-room', { hostName: name });
+});
+joinRoomBtn.addEventListener('click', () => {
+  const roomCode = joinRoomCodeInput.value.trim().toUpperCase();
+  const playerName = profileNameInput.value.trim();
+  if (!roomCode || !playerName) {
+    showToast('请输入房间码和昵称。');
+    return;
+  }
+  if (!socket) {
+    showToast('服务器连接未准备好，请刷新页面。');
+    return;
+  }
+  socket.emit('join-room', { roomCode, playerName });
+});
 
 // --- 2) 重置选项对话框事件 ---
 resetBtn.addEventListener('click', resetRoom);                // 顶部“清”按钮唤起重置
@@ -799,20 +971,105 @@ leaderboardCloseBtn.addEventListener('click', () => {         // 榜单最下方
 // 【模块十三：页面首次加载自运行逻辑】
 // ==========================================================================
 
-// 自启动加载：率先读取历史缓存
-loadState();
-// 如果检测到历史打牌房间存在（players有元素）
-if (state.players.length) {
-  // 直接跃过注册与准备大厅，直接亮起游戏记分控制面板
+socket.on('connect', () => {
+  roomStatusText.textContent = '已连接服务器';
+  roomInfo.connected = true;
+  if (currentMode === 'online') {
+    const onlineData = loadOnlineState();
+    const playerName = profileNameInput.value.trim() || onlineData?.playerName;
+    const roomCode = roomInfo.roomCode || onlineData?.roomCode;
+    if (roomCode && playerName) {
+      socket.emit('rejoin-room', {
+        roomCode,
+        playerName,
+      });
+    }
+  }
+});
+
+socket.on('disconnect', () => {
+  roomStatusText.textContent = '连接已断开';
+  roomInfo.connected = false;
+});
+
+socket.on('room-created', ({ roomCode, hostName, players, logs }) => {
+  roomInfo = { roomCode, hostName, isHost: true, connected: true };
+  localStorage.setItem(modeStorageKey, 'online');
+  saveOnlineState();
+  state.players = players;
+  state.logs = logs;
+  state.selectedPlayerId = null;
+  state.pendingTransferTargetId = null;
+  roomInfoBox.innerHTML = `<strong>房间码：</strong>${roomCode}<br/><strong>房主：</strong>${hostName}`;
+  roomInfoBox.classList.remove('hidden');
+  roomStatusText.textContent = `房间 ${roomCode} 已创建`;
+  modePanel.classList.add('hidden');
+  roomPanel.classList.add('hidden');
   countPanel.classList.add('hidden');
   nicknamePanel.classList.add('hidden');
   gamePanel.classList.remove('hidden');
   logsPanel.classList.remove('hidden');
-  render(); // 执行一轮全局重渲染
-} else {
-  // 如果是全新的局，则初始化首屏，展示第一步“选择人数”
-  countPanel.classList.remove('hidden');
+  updateHeaderControls();
+  render();
+});
+
+socket.on('room-error', ({ message }) => {
+  showToast(message);
+});
+
+socket.on('room-state', ({ roomCode, hostName, hostId, players, logs }) => {
+  roomInfo.roomCode = roomCode;
+  roomInfo.hostName = hostName;
+  roomInfo.isHost = socket.id === hostId;
+  saveOnlineState();
+  state.players = players;
+  state.logs = logs;
+  state.selectedPlayerId = null;
+  state.pendingTransferTargetId = null;
+  roomInfoBox.innerHTML = `<strong>房间码：</strong>${roomCode}<br/><strong>房主：</strong>${hostName}<br/><strong>玩家：</strong>${players.map((player) => player.name).join('，')}`;
+  roomInfoBox.classList.remove('hidden');
+  roomStatusText.textContent = `房间 ${roomCode}`;
+  modePanel.classList.add('hidden');
+  roomPanel.classList.add('hidden');
+  countPanel.classList.add('hidden');
   nicknamePanel.classList.add('hidden');
+  gamePanel.classList.remove('hidden');
+  logsPanel.classList.remove('hidden');
+  updateHeaderControls();
+  render();
+});
+
+const onlineSession = loadOnlineState();
+loadState();
+syncProfilePreview();
+restoreModePanel();
+if (onlineSession && currentMode === 'online') {
+  if (onlineSession.playerName) {
+    profileNameInput.value = onlineSession.playerName;
+    syncProfilePreview();
+  }
+  if (onlineSession.roomCode) {
+    roomInfo.roomCode = onlineSession.roomCode;
+    roomInfo.hostName = null;
+    roomInfo.isHost = false;
+  }
+}
+if (state.players.length && currentMode === 'local') {
+  modePanel.classList.add('hidden');
+  roomPanel.classList.add('hidden');
+  countPanel.classList.add('hidden');
+  nicknamePanel.classList.add('hidden');
+  gamePanel.classList.remove('hidden');
+  logsPanel.classList.remove('hidden');
+  roomStatusText.textContent = '本地模式';
+  roomStatusText.style.visibility = 'visible';
+  updateHeaderControls();
+  render();
+} else {
+  modePanel.classList.remove('hidden');
+  countPanel.classList.add('hidden');
+  nicknamePanel.classList.add('hidden');
+  roomPanel.classList.add('hidden');
   gamePanel.classList.add('hidden');
   logsPanel.classList.add('hidden');
 }

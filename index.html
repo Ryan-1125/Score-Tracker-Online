@@ -56,29 +56,44 @@
         <div>
           <p class="eyebrow">papership</p>
           <h1>牌局记分</h1>
-          <p class="subtitle"></p>
+          <p id="roomStatusText" class="subtitle"></p>
         </div>
         <div class="header-actions">
           <button id="diceBtn" class="secondary-btn theme-btn" aria-label="掷骰子">骰</button>
           <button id="themeToggleBtn" class="secondary-btn theme-btn" aria-label="切换主题">昼</button>
-          <button id="resetBtn" class="secondary-btn theme-btn" aria-label="重置房间">清</button>
-          <button id="settleBtn" class="secondary-btn theme-btn" aria-label="结算本局">结</button>
+          <button id="resetBtn" class="secondary-btn theme-btn hidden" aria-label="重置房间">清</button>
+          <button id="settleBtn" class="secondary-btn theme-btn hidden" aria-label="结算本局">结</button>
         </div>
       </header>
 
-      <!-- 【模块一：选择人数区块（默认首屏展示）】
-           进入牌局记分的第一步，用户在此自由微调本局参与的人数（支持 2 - 8 人，默认为经典 4 人局） -->
-      <section class="panel registration-panel" id="countPanel">
-        <h2 class="step-title">选择人数</h2>
-        <div class="player-count-step">
-          <input id="playerCountInput" type="number" min="2" max="8" value="4" class="count-input" />
-          <button id="nextStepBtn" class="primary-btn next-step-btn">下一步</button>
+      <section class="panel mode-panel" id="modePanel">
+        <div class="mode-card">
+          <div class="profile-preview">
+            <div id="profileAvatar" class="avatar large-avatar">?</div>
+            <div class="profile-input-row">
+              <input id="profileNameInput" type="text" maxlength="8" placeholder="输入昵称" value="" />
+            </div>
+          </div>
+          <div class="mode-actions">
+            <button id="localModeBtn" class="primary-btn">本地模式</button>
+            <button id="onlineModeBtn" class="primary-btn">联机模式</button>
+          </div>
         </div>
       </section>
 
-      <!-- 【模块二：登记昵称区块（初始隐藏：hidden）】
-           当确定人数后开启第二步。
-           表单底部的 inputs-grid 容器会根据 JS 逻辑动态生成对应人数的输入框，用于用户登记名字 -->
+      <!-- 【模块一：选择人数区块（本地模式）】 -->
+      <section class="panel registration-panel hidden" id="countPanel">
+        <h2 class="step-title">选择人数</h2>
+        <div class="player-count-row">
+          <input id="playerCountInput" type="number" min="2" max="8" value="4" class="count-input" />
+          <div class="count-actions">
+            <button id="countBackBtn" class="secondary-btn">上一步</button>
+            <button id="nextStepBtn" class="primary-btn next-step-btn">下一步</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 【模块二：登记昵称区块（本地模式）】 -->
       <section class="panel registration-panel hidden" id="nicknamePanel">
         <h2 class="step-title">登记昵称</h2>
         <form id="registrationForm" class="registration-form">
@@ -88,6 +103,29 @@
           </div>
           <div class="inputs-grid" id="playerNameInputs"></div>
         </form>
+      </section>
+
+      <section class="panel registration-panel hidden" id="roomPanel">
+        <div class="panel-header-row">
+          <h2 class="step-title">联机房间</h2>
+          <button id="roomBackBtn" class="secondary-btn">上一步</button>
+        </div>
+        <div class="room-controls">
+          <div class="room-card room-card-create">
+            <h3>我要开房</h3>
+            <div class="room-card-row">
+              <button id="createRoomBtn" class="primary-btn">创建房间</button>
+            </div>
+          </div>
+          <div class="room-card room-card-join">
+            <h3>我要进房</h3>
+            <div class="room-card-row">
+              <input id="joinRoomCodeInput" type="text" placeholder="4位房间码" maxlength="4" />
+              <button id="joinRoomBtn" class="primary-btn">加入房间</button>
+            </div>
+          </div>
+        </div>
+        <div id="roomInfoBox" class="room-info-box hidden"></div>
       </section>
 
       <!-- 【模块三：核心游戏计分面板（初始隐藏：hidden）
@@ -202,7 +240,7 @@
          由此容器承载并带着物理弹性（Spring）效果向上滑入弹出警告，随后在 2.5 秒后自动收回 -->
     <div id="toast" class="toast-container"></div>
 
-    <!-- 挂载控制网页所有功能运转、存取本地缓存、逻辑计算的 JavaScript 代码 -->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

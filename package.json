@@ -1,0 +1,14 @@
+{
+  "name": "score-tracker-online",
+  "version": "1.0.0",
+  "description": "Minimal online score tracker with Node.js, Socket.IO and SQLite",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.19.2",
+    "socket.io": "^4.1.1"
+  }
+}
