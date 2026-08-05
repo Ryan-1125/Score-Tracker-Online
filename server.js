@@ -28,7 +28,7 @@ db.prepare(`
   )
 `).run();
 
-const CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const CODE_CHARS = '0123456789';
 function createRoomCode() {
   let code = '';
   for (let i = 0; i < 4; i += 1) {
@@ -193,6 +193,23 @@ io.on('connection', (socket) => {
     }
     if (room.hostId !== socket.id) {
       socket.emit('room-error', { message: '只有房主可以重置房间' });
+      return;
+    }
+
+    room.players = room.players.map((player) => ({ ...player, score: 0 }));
+    room.logs = [];
+    saveRoom(room);
+    emitRoomState(roomCode);
+  });
+
+  socket.on('reset-score', ({ roomCode }) => {
+    const room = getRoom(roomCode);
+    if (!room) {
+      socket.emit('room-error', { message: '房间不存在' });
+      return;
+    }
+    if (room.hostId !== socket.id) {
+      socket.emit('room-error', { message: '只有房主可以重置分数' });
       return;
     }
 

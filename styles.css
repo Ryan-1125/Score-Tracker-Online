@@ -128,6 +128,7 @@ p {
 #roomStatusText {
   visibility: hidden;
   min-height: 1.2em;
+  transition: color 0.2s ease;
 }
 
 #roomStatusText:not(.hidden) {
@@ -136,6 +137,25 @@ p {
 
 #roomStatusText.hidden {
   visibility: hidden;
+}
+
+#roomStatusText[data-state="online"] {
+  color: #10b981;
+}
+
+#roomStatusText[data-state="reconnect"],
+#roomStatusText[data-state="reconnecting"] {
+  color: #f59e0b;
+}
+
+#roomStatusText[data-state="disconnected"],
+#roomStatusText[data-state="failed"],
+#roomStatusText[data-state="error"] {
+  color: #ef4444;
+}
+
+#roomStatusText[data-state="local"] {
+  color: #3b82f6;
 }
 
 

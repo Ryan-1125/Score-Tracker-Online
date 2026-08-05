@@ -77,7 +77,8 @@ const onlineStorageKey = 'mahjong-scoreboard-online';
 const modeStorageKey = 'mahjong-scoreboard-mode';
 const themeStorageKey = 'mahjong-scoreboard-theme';
 
-const socket = window.io ? window.io() : {
+const socketAvailable = Boolean(window.io);
+const socket = socketAvailable ? window.io() : {
   on: () => {},
   emit: () => {},
 };
@@ -103,6 +104,57 @@ function syncProfilePreview() {
   const name = (profileNameInput.value || '').trim();
   const firstChar = Array.from(name)[0] || '?';
   profileAvatar.textContent = firstChar;
+}
+
+function setConnectionStatus(text, stateType) {
+  roomStatusText.textContent = text;
+  roomStatusText.style.visibility = 'visible';
+  roomStatusText.dataset.state = stateType || '';
+}
+
+function setRoomActionLoading(action, isLoading) {
+  if (action === 'create') {
+    createRoomBtn.disabled = isLoading;
+    createRoomBtn.textContent = isLoading ? '创建中...' : '创建房间';
+  } else if (action === 'join') {
+    joinRoomBtn.disabled = isLoading;
+    joinRoomBtn.textContent = isLoading ? '加入中...' : '加入房间';
+  }
+}
+
+function normalizeRoomCode(code) {
+  // 允许字母与数字，自动大写，兼容历史房间码（字母或数字）
+  return String(code).replace(/[^0-9A-Za-z]/g, '').slice(0, 4).toUpperCase();
+}
+
+function updateRoomInfoBox() {
+  if (!roomInfo.roomCode) {
+    roomInfoBox.classList.add('hidden');
+    return;
+  }
+
+  const modeText = currentMode === 'online' ? '联机模式' : '本地模式';
+  const hostText = roomInfo.isHost ? '你是房主' : '你不是房主，无法重置房间';
+  const playerText = state.players.map((player) => player.name).join('，') || '无玩家';
+  let detailHtml = '';
+
+  if (currentMode === 'online') {
+    detailHtml = `
+      <p class="room-info-line">房间号：<strong>${roomInfo.roomCode}</strong></p>
+      <p class="room-info-line">${roomInfo.isHost ? '你是房主' : '普通玩家'}</p>
+      <p class="room-info-line">当前玩家：${playerText}</p>
+    `;
+  } else {
+    detailHtml = `<p class="room-info-line">${modeText}</p>`;
+  }
+
+  roomInfoBox.innerHTML = detailHtml;
+  roomInfoBox.classList.remove('hidden');
+}
+
+function isValidRoomCode(value) {
+  // 接受 4 位数字或字母数字混合的旧房间码
+  return /^[0-9A-Za-z]{4}$/.test(value);
 }
 
 function saveOnlineState() {
@@ -150,7 +202,8 @@ function restoreModePanel() {
 }
 
 function updateHeaderControls() {
-  const showControls = currentMode === 'local' || (currentMode === 'online' && roomInfo.isHost && Boolean(roomInfo.roomCode));
+  const inGame = !gamePanel.classList.contains('hidden');
+  const showControls = inGame && (currentMode === 'local' || (currentMode === 'online' && roomInfo.isHost && Boolean(roomInfo.roomCode)));
   resetBtn.classList.toggle('hidden', !showControls);
   settleBtn.classList.toggle('hidden', !showControls);
 }
@@ -247,7 +300,11 @@ function closeDialog() {
 // 唤起重置弹窗，并初始化首步的选项提示文字
 function openResetDialog() {
   dialogTitle.textContent = '选择重置方式';
-  dialogMessage.textContent = '重置房间会清空玩家的信息和分数；仅重置分数会保留玩家信息。';
+  if (currentMode === 'online') {
+    dialogMessage.textContent = '重置房间会清空当前局分数与记录；仅重置分数会保留玩家列表。';
+  } else {
+    dialogMessage.textContent = '重置房间会清空玩家信息与分数；仅重置分数会保留玩家信息。';
+  }
   dialogCancel.textContent = '取消';
   dialogConfirm.textContent = '确认';
   pendingResetMode = null;
@@ -276,6 +333,38 @@ function confirmReset() {
     return;
   }
 
+  if (currentMode === 'local') {
+    if (pendingResetMode === 'room') {
+      state.players = [];
+      state.logs = [];
+      state.selectedPlayerId = null;
+      state.pendingTransferTargetId = null;
+      saveState();
+      currentMode = 'idle';
+      modePanel.classList.remove('hidden');
+      countPanel.classList.add('hidden');
+      nicknamePanel.classList.add('hidden');
+      roomPanel.classList.add('hidden');
+      gamePanel.classList.add('hidden');
+      logsPanel.classList.add('hidden');
+      roomStatusText.textContent = '';
+      roomStatusText.style.visibility = 'hidden';
+      updateHeaderControls();
+      render();
+    } else if (pendingResetMode === 'score') {
+      state.players = state.players.map((player) => ({ ...player, score: 0 }));
+      state.logs = [];
+      state.selectedPlayerId = null;
+      state.pendingTransferTargetId = null;
+      saveState();
+      render();
+      showToast('本局分数已重置。');
+    }
+
+    closeDialog();
+    return;
+  }
+
   if (!roomInfo.roomCode) {
     closeDialog();
     return;
@@ -284,7 +373,7 @@ function confirmReset() {
   if (pendingResetMode === 'room') {
     socket.emit('reset-room', { roomCode: roomInfo.roomCode });
   } else if (pendingResetMode === 'score') {
-    socket.emit('reset-room', { roomCode: roomInfo.roomCode });
+    socket.emit('reset-score', { roomCode: roomInfo.roomCode });
   }
 
   closeDialog();
@@ -480,11 +569,15 @@ function transferScore(targetId, amount) {
   } else {
     actor.score -= amount;
     target.score += amount;
-    state.logs.unshift({
-      time: new Date().toISOString(),
-      transfers: [{ from: actor.name, to: target.name, amount }],
-      currentScores: state.players.map((player) => ({ name: player.name, score: player.score })),
-    });
+    // 本地模式下使用与联机模式相同的日志格式，方便 renderLogs 正确解析与归组
+    const entry = {
+      id: `${Date.now()}`,
+      from: actor.name,
+      to: target.name,
+      amount,
+      timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
+    };
+    state.logs.unshift(entry);
     saveState();
   }
 
@@ -778,8 +871,7 @@ localModeBtn.addEventListener('click', () => {
   localStorage.setItem(modeStorageKey, 'local');
   roomInfo = { roomCode: null, hostName: null, isHost: false, connected: false };
   roomInfoBox.classList.add('hidden');
-  roomStatusText.textContent = '本地模式';
-  roomStatusText.style.visibility = 'visible';
+  setConnectionStatus('本地模式', 'local');
   updateHeaderControls();
   modePanel.classList.add('hidden');
   countPanel.classList.remove('hidden');
@@ -789,9 +881,9 @@ localModeBtn.addEventListener('click', () => {
 onlineModeBtn.addEventListener('click', () => {
   currentMode = 'online';
   localStorage.setItem(modeStorageKey, 'online');
+  roomInfo = { roomCode: null, hostName: null, isHost: false, connected: false };
   roomInfoBox.classList.add('hidden');
-  roomStatusText.textContent = '联机模式';
-  roomStatusText.style.visibility = 'visible';
+  setConnectionStatus('联机模式', 'online');
   modePanel.classList.add('hidden');
   roomPanel.classList.remove('hidden');
   countPanel.classList.add('hidden');
@@ -804,33 +896,50 @@ createRoomBtn.addEventListener('click', () => {
     showToast('请输入你的昵称。');
     return;
   }
-  if (!socket) {
-    showToast('服务器连接未准备好，请刷新页面。');
+  if (!socketAvailable) {
+    showToast('无法加载 Socket.IO 客户端脚本，请确认已通过 HTTP 访问页面。');
     return;
   }
+  if (!socket.connected) {
+    showToast('正在连接服务器，请稍候后再试。');
+    return;
+  }
+  setRoomActionLoading('create', true);
   socket.emit('create-room', { hostName: name });
 });
+joinRoomCodeInput.addEventListener('input', () => {
+  joinRoomCodeInput.value = normalizeRoomCode(joinRoomCodeInput.value);
+});
 joinRoomBtn.addEventListener('click', () => {
-  const roomCode = joinRoomCodeInput.value.trim().toUpperCase();
+  const roomCode = normalizeRoomCode(joinRoomCodeInput.value);
   const playerName = profileNameInput.value.trim();
-  if (!roomCode || !playerName) {
-    showToast('请输入房间码和昵称。');
+  if (!playerName) {
+    showToast('请输入昵称。');
     return;
   }
-  if (!socket) {
-    showToast('服务器连接未准备好，请刷新页面。');
+  if (!isValidRoomCode(roomCode)) {
+    showToast('请输入4位数字房间码。');
     return;
   }
+  if (!socketAvailable) {
+    showToast('无法加载 Socket.IO 客户端脚本，请确认已通过 HTTP 访问页面。');
+    return;
+  }
+  if (!socket.connected) {
+    showToast('正在连接服务器，请稍候后再试。');
+    return;
+  }
+  setRoomActionLoading('join', true);
   socket.emit('join-room', { roomCode, playerName });
 });
 
 // --- 2) 重置选项对话框事件 ---
-resetBtn.addEventListener('click', resetRoom);                // 顶部“清”按钮唤起重置
+resetBtn.addEventListener('click', openResetDialog);                // 顶部“清”按钮唤起重置
 chooseCancelBtn.addEventListener('click', closeDialog);       // 选项第一步点“取消”
 chooseRoomBtn.addEventListener('click', () => selectResetMode('room'));   // 选项点“重置房间”
 chooseScoreBtn.addEventListener('click', () => selectResetMode('score')); // 选项点“重置分数”
 dialogCancel.addEventListener('click', closeDialog);          // 二次确认点“取消”
-dialogConfirm.addEventListener('click', confirmReset);        // 二次确认点“确认”
+dialogConfirm.addEventListener('click', confirmReset);        // 二次确认点“确认"
 dialogOverlay.addEventListener('click', (event) => {          // 点击弹窗黑边遮罩层空白关闭
   if (event.target === dialogOverlay) {
     closeDialog();
@@ -972,24 +1081,55 @@ leaderboardCloseBtn.addEventListener('click', () => {         // 榜单最下方
 // ==========================================================================
 
 socket.on('connect', () => {
-  roomStatusText.textContent = '已连接服务器';
   roomInfo.connected = true;
   if (currentMode === 'online') {
+    setConnectionStatus('联机模式', 'online');
     const onlineData = loadOnlineState();
     const playerName = profileNameInput.value.trim() || onlineData?.playerName;
     const roomCode = roomInfo.roomCode || onlineData?.roomCode;
     if (roomCode && playerName) {
+      setConnectionStatus('正在恢复房间，请稍候', 'reconnect');
       socket.emit('rejoin-room', {
         roomCode,
         playerName,
       });
     }
+  } else {
+    setConnectionStatus('已连接服务器', 'connected');
   }
 });
 
 socket.on('disconnect', () => {
-  roomStatusText.textContent = '连接已断开';
   roomInfo.connected = false;
+  if (currentMode === 'online') {
+    setConnectionStatus('连接已断开', 'disconnected');
+  }
+});
+
+socket.on('reconnect_attempt', () => {
+  if (currentMode === 'online') {
+    setConnectionStatus('正在重连...', 'reconnecting');
+  }
+});
+
+socket.on('reconnect', () => {
+  if (currentMode === 'online') {
+    setConnectionStatus('联机模式', 'online');
+  }
+});
+
+socket.on('reconnect_failed', () => {
+  if (currentMode === 'online') {
+    setConnectionStatus('重连失败，请刷新页面或重新加入房间', 'failed');
+    showToast('重连失败，请重新进入房间。');
+    clearOnlineState();
+  }
+});
+
+socket.on('connect_error', () => {
+  if (currentMode === 'online') {
+    setConnectionStatus('连接错误，请检查网络', 'error');
+  }
 });
 
 socket.on('room-created', ({ roomCode, hostName, players, logs }) => {
@@ -1000,9 +1140,9 @@ socket.on('room-created', ({ roomCode, hostName, players, logs }) => {
   state.logs = logs;
   state.selectedPlayerId = null;
   state.pendingTransferTargetId = null;
-  roomInfoBox.innerHTML = `<strong>房间码：</strong>${roomCode}<br/><strong>房主：</strong>${hostName}`;
+  setConnectionStatus(`联机模式 [${roomCode}] - 你是房主`, 'online');
+  updateRoomInfoBox();
   roomInfoBox.classList.remove('hidden');
-  roomStatusText.textContent = `房间 ${roomCode} 已创建`;
   modePanel.classList.add('hidden');
   roomPanel.classList.add('hidden');
   countPanel.classList.add('hidden');
@@ -1011,13 +1151,17 @@ socket.on('room-created', ({ roomCode, hostName, players, logs }) => {
   logsPanel.classList.remove('hidden');
   updateHeaderControls();
   render();
+  setRoomActionLoading('create', false);
 });
 
 socket.on('room-error', ({ message }) => {
   showToast(message);
+  setRoomActionLoading('create', false);
+  setRoomActionLoading('join', false);
 });
 
 socket.on('room-state', ({ roomCode, hostName, hostId, players, logs }) => {
+  const wasHost = roomInfo.isHost;
   roomInfo.roomCode = roomCode;
   roomInfo.hostName = hostName;
   roomInfo.isHost = socket.id === hostId;
@@ -1026,9 +1170,9 @@ socket.on('room-state', ({ roomCode, hostName, hostId, players, logs }) => {
   state.logs = logs;
   state.selectedPlayerId = null;
   state.pendingTransferTargetId = null;
-  roomInfoBox.innerHTML = `<strong>房间码：</strong>${roomCode}<br/><strong>房主：</strong>${hostName}<br/><strong>玩家：</strong>${players.map((player) => player.name).join('，')}`;
+  updateRoomInfoBox();
   roomInfoBox.classList.remove('hidden');
-  roomStatusText.textContent = `房间 ${roomCode}`;
+  setConnectionStatus(`联机模式 [${roomCode}]`, 'online');
   modePanel.classList.add('hidden');
   roomPanel.classList.add('hidden');
   countPanel.classList.add('hidden');
@@ -1037,21 +1181,31 @@ socket.on('room-state', ({ roomCode, hostName, hostId, players, logs }) => {
   logsPanel.classList.remove('hidden');
   updateHeaderControls();
   render();
+  setRoomActionLoading('join', false);
+  if (!wasHost && roomInfo.isHost) {
+    showToast('你已成为新房主。');
+  }
 });
 
 const onlineSession = loadOnlineState();
 loadState();
 syncProfilePreview();
 restoreModePanel();
-if (onlineSession && currentMode === 'online') {
+if (onlineSession) {
   if (onlineSession.playerName) {
-    profileNameInput.value = onlineSession.playerName;
+    if (!profileNameInput.value) {
+      profileNameInput.value = onlineSession.playerName;
+    }
     syncProfilePreview();
   }
   if (onlineSession.roomCode) {
     roomInfo.roomCode = onlineSession.roomCode;
     roomInfo.hostName = null;
     roomInfo.isHost = false;
+    joinRoomCodeInput.value = onlineSession.roomCode;
+    if (currentMode === 'online') {
+      updateRoomInfoBox();
+    }
   }
 }
 if (state.players.length && currentMode === 'local') {
