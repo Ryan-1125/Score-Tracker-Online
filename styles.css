@@ -1122,4 +1122,121 @@ body.light-theme .leaderboard-item {
 body.light-theme .toast-container {
   color: #ffffff;      /* 白色字 */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}/* Unified interface: system typography, consistent spacing and clear scores. */
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); }
+button, input, select { font: inherit; }
+.app { max-width: 860px; padding: 32px 24px; }
+.panel, .dialog-card { border-radius: 16px; padding: 24px; box-shadow: none; }
+.primary-btn, .secondary-btn, .dialog-btn { border-radius: 999px; min-height: 44px; padding: 10px 16px; justify-content: center; }
+.theme-btn { border-radius: 50%; width: 44px; height: 44px; padding: 0; }
+.primary-btn { background: var(--accent); }
+button:disabled { opacity: 1; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+input, select { border: 1px solid var(--panel-2); border-radius: 12px; padding: 12px; color: var(--text); background: var(--bg); min-height: 44px; min-width: 0; }
+.mode-card { background: transparent; border: 0; padding: 56px 0; gap: 24px; }
+.mode-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: min(480px,100%); }
+.mode-actions button { width: 100%; height: 64px; }
+.mode-hint { color: var(--muted); }
+.panel-header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+h2, .step-title { font-size: 1.25rem; margin: 0; }
+.registration-form { display: flex; flex-direction: column; gap: 20px; }
+.inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.setup-player-row { display: flex; align-items: center; gap: 8px; }
+.setup-player-row input { width: 100%; }
+.remove-player { border: 0; border-radius: 50%; width: 36px; height: 36px; flex-shrink: 0; color: var(--muted); background: transparent; font-size: 24px; cursor: pointer; }
+.registration-actions { display: flex; justify-content: space-between; gap: 12px; }
+.online-profile { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 24px; }
+.online-profile input { flex: 1; width: 100%; }
+.online-profile select { width: 76px; }
+.room-controls { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.room-card { padding: 16px; border-radius: 12px; background: var(--bg); }
+.room-card h3 { font-size: 1rem; margin-bottom: 12px; }
+.room-card-row { display: flex; gap: 12px; flex-wrap: nowrap; }
+.room-card-row input { flex: 1; width: 100%; max-width: 220px; }
+.room-card-row button { flex-shrink: 0; }
+.controls-row { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.player-info-title { font-size: 1rem; }
+.players-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.player-card, body.light-theme .player-card { background: var(--bg); border-radius: 12px; padding: 16px; min-height: 112px; }
+.player-info { gap: 8px; }
+.score-badge { background: transparent !important; padding: 0; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.avatar { background: var(--panel-2); border-radius: 50%; color: var(--text); }
+.game-room-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); margin-bottom: 16px; font-size: .9rem; }
+.game-room-info button { font-size: .85rem; }
+.tips { font-size: .85rem; line-height: 1.6; margin-top: 12px; }
+.dialog-card { gap: 16px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+.dialog-card label { display: flex; flex-direction: column; gap: 8px; }
+.dialog-card p { min-height: 0; margin: 0; line-height: 1.6; }
+.dialog-actions { gap: 12px; }
+.leaderboard-list { margin: 0; }
+.leaderboard-item { border-radius: 12px; }
+.leaderboard-item .score-badge { font-size: 1.3rem; }
+body.light-theme { --good: #13775b; --danger: #be3349; }
+.hidden { display: none !important; }
+@media (max-width: 600px) {
+  .app { padding: 20px 16px; }
+  .panel, .dialog-card { padding: 16px; }
+  .hero { gap: 12px; }
+  .hero h1 { font-size: 1.6rem; }
+  .header-actions { gap: 8px; margin-top: 0; }
+  .inputs-grid { grid-template-columns: 1fr; }
+  .players-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .player-card, body.light-theme .player-card { flex-direction: column; align-items: flex-start; min-height: 138px; padding: 12px; }
+  .player-info strong { font-size: .95rem; }
+  .score-badge { font-size: 1.5rem; }
+  .avatar { width: 36px; height: 36px; min-width: 36px; font-size: 1rem; }
+  .mode-card { padding: 48px 0; }
+  .game-room-info { flex-wrap: wrap; }
+  .dialog-actions { flex-wrap: wrap; }
 }
+
+.add-player { width: 100%; min-height: 44px; align-self: center; background: transparent; border: 1px dashed var(--muted); }
+.registration-actions { align-items: center; flex-wrap: nowrap; }
+.registration-actions .tips { margin: 0; min-width: 0; }
+.registration-actions .primary-btn { flex-shrink: 0; align-self: center; }
+.player-presence { color: var(--muted); font-size: .75rem; font-weight: 400; }
+.room-member { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--panel-2); }
+.room-member button { font-size:.85rem; }
+.recent-seat-row { display:flex; gap:12px; margin-top:20px; align-items:center; }
+.recent-seat-row select { flex:1; }
+.recent-seat-row button { flex-shrink:0; }
+.game-room-info { flex-wrap:wrap; }
+.game-room-info > span { margin-right:auto; }
+.success-btn { background: #34d399; color: #052e16; }
+.dialog-card { position: relative; }
+.dialog-card h3 { padding-right: 40px; }
+.dialog-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+.dialog-close:hover { background: var(--panel-2); color: var(--text); }
+.game-room-info { justify-content: flex-end; }
+#roomManageBtn, #undoBtn { font-family: inherit; font-size: 1rem; font-weight: 400; }
+.score-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.score-actions .game-room-info { margin-bottom: 0; }
+.room-member { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.room-member button { min-width: 104px; font-family: inherit; font-weight: 400; }
+.member-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.member-actions button:last-child { min-width: 64px; }
+.room-settings { display: grid; gap: 12px; margin-top: 20px; }
+.room-settings label, .room-password { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--muted); }
+.room-settings label { flex-direction: row; justify-content: flex-start; }
+.room-settings input[type="checkbox"] { width: 18px; height: 18px; margin: 0; }
+.room-settings input[type="password"] { flex: 1; }
+.room-settings-section { margin-top: 16px; }
+.room-settings-section summary { cursor: pointer; color: var(--muted); }
+.room-password { margin-top: 18px; }
+.room-settings input[type="password"], .room-password input { min-width: 0; max-width: 100%; }
+#roundsContent details { margin-top: 16px; padding: 16px; border-radius: 20px; background: var(--panel-2); }
+#roundsContent summary { cursor: pointer; }
+.dialog-card { max-height: 88dvh; overflow-y: auto; }
+.avatar-picker { position: relative; }
+.avatar-picker summary { cursor: pointer; border-radius: 999px; padding: 12px 18px; background: var(--panel-2); }
+.avatar-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 12px 0; }
+.avatar-options { justify-items: center; }
+.avatar-options button { border-radius: 50%; padding: 0; width: 44px; height: 44px; min-width: 0; font-size: 1.3rem; }
+@media (max-width: 480px) {
+  .room-member { gap: 8px; }
+  .room-member button { min-width: 80px; padding: 10px 12px; }
+  .score-actions { gap: 8px; }
+  .member-actions { flex-direction: column; }
+}
+.copy-room-status { cursor: pointer; width: fit-content; }
+.copy-room-status:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 4px; border-radius: 4px; }

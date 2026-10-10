@@ -4,7 +4,9 @@
   "description": "Minimal online score tracker with Node.js, Socket.IO and SQLite",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test",
+    "backup": "node backup.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

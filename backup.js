@@ -1,0 +1,10 @@
+const path = require('path');
+const fs = require('fs');
+const Database = require('better-sqlite3');
+const source = process.env.SCORE_DB_PATH || path.join(__dirname, 'data', 'rooms.db');
+if (!fs.existsSync(source)) throw new Error('数据库不存在，请先启动项目');
+const directory = path.join(__dirname, 'data', 'backups');
+fs.mkdirSync(directory, { recursive: true });
+const destination = path.join(directory, 'rooms-' + new Date().toISOString().replace(/[:.]/g, '-') + '.db');
+const db = new Database(source, { readonly: true });
+db.backup(destination).then(() => { db.close(); console.log('备份已保存：' + destination); }).catch(error => { db.close(); console.error(error.message); process.exitCode = 1; });
