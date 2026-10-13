@@ -50,12 +50,12 @@ function name(value) {
 }
 function avatarValue(value) {
   if (value === undefined) return '♠';
-  if (!['昵称', '♠', '♥', '♦', '♣', '🐱', '🐼', '🐶', '🦊', '🐯', '🐰', '🐸', '🐨', '🦁', '🐵', '🐧', '🦉', '🌙', '⭐', '🌻', '🍀', '🔥', '🌊', '🎲', '🎯'].includes(value)) throw new Error('请选择有效头像');
+  if (!['😀','😊','😂','😎','🤔','😴','☀️','☁️','🌧️','❄️','🐻','🐹','昵称', '♠', '♥', '♦', '♣', '🐱', '🐼', '🐶', '🦊', '🐯', '🐰', '🐸', '🐨', '🦁', '🐵', '🐧', '🦉', '🌙', '⭐', '🌻', '🍀', '🔥', '🌊', '🎲', '🎯'].includes(value)) throw new Error('请选择有效头像');
   return value;
 }
 function avatarColorValue(value) {
   if (value == null || value === '') return null;
-  if (!['#357960','#3b72b8','#8056ad','#ba5076','#b66b32','#497f88','#a54949','#64748b'].includes(value)) throw new Error('请选择有效头像底色');
+  if (!['#a66b58','#9a9255','#357960','#3b72b8','#8056ad','#ba5076','#b66b32','#497f88','#a54949','#64748b','#748b75','#69869c','#8e7c9f','#a67d87','#a18b72','#85865e','#608e89','#706c91'].includes(value)) throw new Error('请选择有效头像底色');
   return value;
 }
 function setHost(room, player) {

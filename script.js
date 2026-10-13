@@ -35,7 +35,7 @@ const amountDialogInput = document.getElementById('amountDialogInput');
 const amountDialogCancel = document.getElementById('amountDialogCancel');
 const amountDialogConfirm = document.getElementById('amountDialogConfirm');
 let amountReplaceNext = true;
-const avatarColors = [['自动',''],['松绿','#357960'],['海蓝','#3b72b8'],['紫罗兰','#8056ad'],['玫瑰','#ba5076'],['琥珀','#b66b32'],['青蓝','#497f88'],['珊瑚','#a54949'],['石灰','#64748b']];
+const avatarColors = [['随机',''],['珊瑚','#a54949'],['陶土','#a66b58'],['琥珀','#b66b32'],['奶茶','#a18b72'],['麦黄','#9a9255'],['橄榄','#85865e'],['鼠尾草','#748b75'],['松绿','#357960'],['烟青','#608e89'],['青蓝','#497f88'],['雾蓝','#69869c'],['海蓝','#3b72b8'],['暮紫','#706c91'],['紫罗兰','#8056ad'],['薰衣草','#8e7c9f'],['玫瑰','#ba5076']];
 let editingLocalPlayerId = null;
 
 // 获取底端轻量滑动通知容器元素
@@ -114,9 +114,10 @@ function syncProfilePreview() {
   const name = (profileNameInput.value || '').trim();
   const firstChar = Array.from(name)[0] || '?';
   const avatar = document.getElementById('profileAvatarSelect').value;
-  profileAvatar.textContent = avatar === '昵称' ? firstChar : avatar;
-  profileAvatar.style.background = document.getElementById('profileAvatarColor').value || 'var(--panel-2)';
+  profileAvatar.innerHTML = avatarGraphic(avatar === '昵称' ? firstChar : avatar);
+  profileAvatar.style.background = avatarGradient(document.getElementById('profileAvatarColor').value || 'var(--panel-2)');
   profileAvatar.style.color = document.getElementById('profileAvatarColor').value ? '#fff' : 'var(--text)';
+  syncAvatarSelection('profileAvatarSelect');
 }
 
 function setConnectionStatus(text, stateType) {
@@ -130,6 +131,9 @@ function setConnectionStatus(text, stateType) {
 }
 
 function setRoomActionLoading(action, isLoading) {
+  const button = action === 'create' ? createRoomBtn : joinRoomBtn;
+  button.classList.toggle('motion-loading', isLoading);
+  button.setAttribute('aria-busy', String(isLoading));
   if (action === 'create') {
     createRoomBtn.disabled = isLoading;
     createRoomBtn.textContent = isLoading ? '创建中...' : '创建房间';
@@ -423,7 +427,9 @@ function confirmReset() {
 
 // 根据用户微调选择的参与总人数，实时、安全、自适应地在页面生成对应数量的昵称输入文本框
 let setupPlayers = ['', ''];
-function renderPlayerNameInputs() {
+function renderPlayerNameInputs(removedIndex) {
+  const oldRows = [...playerNameInputs.querySelectorAll('.setup-player-row')].map(row => ({ rect: row.getBoundingClientRect(), clone: row.cloneNode(true) }));
+  const removedRows = Number.isInteger(removedIndex) ? oldRows.splice(removedIndex, 1) : [];
   playerCountInput.value = setupPlayers.length;
   const addButton = document.getElementById('addPlayerBtn');
   playerNameInputs.replaceChildren();
@@ -432,13 +438,13 @@ function renderPlayerNameInputs() {
     const input = document.createElement('input'); input.type = 'text'; input.name = 'player' + (index + 1); input.maxLength = 8; input.value = name; input.placeholder = '玩家' + (index + 1); input.setAttribute('aria-label', input.placeholder);
     input.addEventListener('input', () => { setupPlayers[index] = input.value; });
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove-player'; remove.textContent = '×'; remove.setAttribute('aria-label', '移除玩家' + (index + 1)); remove.disabled = setupPlayers.length <= 2;
-    remove.addEventListener('click', () => { setupPlayers.splice(index, 1); renderPlayerNameInputs(); });
+    remove.addEventListener('click', () => { setupPlayers.splice(index, 1); renderPlayerNameInputs(index); });
     row.append(input, remove); playerNameInputs.append(row);
   });
   addButton.disabled = setupPlayers.length >= 8;
   addButton.classList.toggle('hidden', setupPlayers.length >= 8);
-  playerNameInputs.append(addButton);
   document.getElementById('playerCountHint').textContent = setupPlayers.length + ' / 8 位玩家 · 点击昵称可修改';
+  animateSetupRows(oldRows, removedRows);
 }
 
 // 界面切换：从“人数选择”第一步切换至“输入名字”第二步
@@ -483,9 +489,11 @@ function registerPlayers(event) {
     return;
   }
 
+  const roomAvatarColors = avatarColors.filter(([,color]) => color).map(([,color]) => color);
   state.players = names.map((name, index) => ({
     id: `p${index + 1}`,
     name,
+    avatarColor: roomAvatarColors.splice(Math.floor(Math.random() * roomAvatarColors.length), 1)[0],
     score: 0,
   }));
   state.selectedPlayerId = null;
@@ -663,6 +671,7 @@ function selectPlayer(playerId) {
 
 // 玩家卡片渲染模块：根据内存中的最新玩家数据，动态重构并挂载 HTML 玩家卡片网格
 function renderPlayers() {
+  const previous = new Map([...playersGrid.querySelectorAll('[data-player-id]')].map(card => [card.dataset.playerId, { score: Number(card.dataset.score), active: card.classList.contains('active'), presence: card.dataset.presence }]));
   playersGrid.innerHTML = '';
 
   if (!state.players.length) {
@@ -679,6 +688,9 @@ function renderPlayers() {
   state.players.forEach((player) => {
     const card = document.createElement('button');
     card.className = 'player-card';
+    card.dataset.playerId = player.id;
+    card.dataset.score = player.score;
+    card.dataset.presence = String(player.online);
     if (state.selectedPlayerId === player.id) {
       card.classList.add('active'); // 出分人亮黄框样式
     }
@@ -687,7 +699,7 @@ function renderPlayers() {
     
     // 只有当场上有唯一大赢家，且循环遍历到该赢家时，才在其右上角渲染皇冠 👑
     const crownIcon = hasUniqueWinner && player.id === highestScorePlayers[0].id 
-      ? '<span class="crown-icon">👑</span>' 
+      ? '<span class="crown-icon">' + avatarGraphic('👑') + '</span>'
       : '';
     
     // 提取玩家昵称的首字符（采用 Array.from 避免多字节复杂 Emoji 首字母截取出现乱码）
@@ -695,7 +707,7 @@ function renderPlayers() {
     
     card.innerHTML = `
       ${crownIcon}
-      <div class="avatar" style="background:${playerAvatarBackground(player)}">${escapeHtml(player.avatar === '昵称' ? firstChar : player.avatar || firstChar)}</div>
+      <div class="avatar" style="background:${playerAvatarBackground(player)}">${avatarGraphic(player.avatar === '昵称' ? firstChar : player.avatar || firstChar)}</div>
       <div class="player-info">
         <strong>${escapeHtml(player.name)}</strong>
         ${currentMode === 'online' ? '<span class="player-presence">' + (player.left ? '已离开' : player.online ? '在线' : '离线') + (player.isHost ? ' [房主]' : '') + '</span>' : ''}
@@ -709,6 +721,11 @@ function renderPlayers() {
     });
 
     frag.appendChild(card);
+    const old = previous.get(String(player.id));
+    if (old && old.score !== player.score) animateScore(card, old.score, player.score);
+    if (!old) card.classList.add('motion-enter');
+    if (old && old.presence !== card.dataset.presence) card.querySelector('.player-presence')?.classList.add('motion-enter');
+    if (card.classList.contains('active') && !old?.active) card.querySelector('.avatar').classList.add('motion-pop');
   });
 
   playersGrid.appendChild(frag);
@@ -736,14 +753,15 @@ function renderLeaderboard() {
     
     const card = document.createElement('div');
     card.className = 'leaderboard-item';
+    card.style.setProperty('--motion-delay', Math.min(index, 7) * 35 + 'ms');
     
     // 4) 输赢家勋章：最高分获得皇冠 👑，最低分领到小丑 🤡
     let badgeIcon = '';
     if (hasScoreVariance) {
       if (player.score === maxScore) {
-        badgeIcon = '<span class="leaderboard-badge-icon">👑</span>';
+        badgeIcon = '<span class="leaderboard-badge-icon">' + avatarGraphic('👑') + '</span>';
       } else if (player.score === minScore) {
-        badgeIcon = '<span class="leaderboard-badge-icon">🤡</span>';
+        badgeIcon = '<span class="leaderboard-badge-icon">' + avatarGraphic('🤡') + '</span>';
       }
     }
     
@@ -752,7 +770,7 @@ function renderLeaderboard() {
     
     card.innerHTML = `
       <div class="leaderboard-rank">第 ${displayRank} 名</div>
-      <div class="avatar leaderboard-avatar" style="background:${playerAvatarBackground(player)}">${escapeHtml(player.avatar === '昵称' ? firstChar : player.avatar || firstChar)}</div>
+      <div class="avatar leaderboard-avatar" style="background:${playerAvatarBackground(player)}">${avatarGraphic(player.avatar === '昵称' ? firstChar : player.avatar || firstChar)}</div>
       <div class="leaderboard-info">
         <strong>${escapeHtml(player.name)}</strong>
         <div class="leaderboard-score-group">
@@ -777,6 +795,8 @@ function renderLeaderboard() {
 
 // 流水记录渲染器：提取所有对账日志，进行 1 分钟时差智能归组并逆序展示
 function renderLogs() {
+  const previousLatest = logList.dataset.latest;
+  logList.dataset.latest = state.logs[0]?.id || '';
   if (!state.logs.length) {
     logList.innerHTML = '<li class="log-item">暂无积分记录</li>';
     recordCount.textContent = '0 条记录';
@@ -828,6 +848,7 @@ function renderLogs() {
   groups.forEach((group, index) => {
     const item = document.createElement('li');
     item.className = 'log-item';
+    if (index === 0 && previousLatest !== undefined && previousLatest !== String(state.logs[0].id)) item.classList.add('motion-new-log');
 
     // 截取掉具体秒数，仅展示发生年月日的具体分值，界面排版更清秀
     const firstEntry = group[0];
@@ -1329,17 +1350,24 @@ document.getElementById('undoConfirmBtn').addEventListener('click', () => {
   if (!log || log.id !== pendingUndoLogId) { closeUndoDialog(); return showToast('记录已变化，请重新选择撤销'); }
   if (currentMode === 'online') {
     if (!socket.connected) return showToast('请重连后操作');
-    sendOnlineAction('undo-score', { roomCode: roomInfo.roomCode, logId: pendingUndoLogId });
+    sendOnlineAction('undo-score', { roomCode: roomInfo.roomCode, logId: pendingUndoLogId }, result => { if (result?.ok) showToast('已撤销'); });
   } else {
     const from = state.players.find(p => p.name === log.from);
     const to = state.players.find(p => p.name === log.to);
     ScoreCore.transfer(state.players, to.id, from.id, log.amount);
     state.logs.shift(); saveState(); render();
+    showToast('已撤销');
   }
   closeUndoDialog();
 });
 document.getElementById('exportBtn').addEventListener('click', exportScoreImage);
-function exportScoreImage() {
+async function exportScoreImage() {
+  const exportButton = document.getElementById('exportBtn');
+  if (exportButton.disabled) return;
+  exportButton.disabled = true; exportButton.classList.add('motion-loading');
+  exportButton.setAttribute('aria-busy', 'true');
+  try {
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   const sorted = [...state.players].sort((a,b) => b.score-a.score);
   let suggestions;
   try { suggestions = ScoreCore.settlement(state.players); } catch (error) { return showToast(error.message, 'error'); }
@@ -1358,7 +1386,7 @@ function exportScoreImage() {
   document.getElementById('scoreImagePreview').src = imageUrl;
   document.getElementById('saveImageLink').href = imageUrl;
   document.getElementById('imagePreviewDialog').classList.remove('hidden');
-
+  } finally { exportButton.disabled = false; exportButton.classList.remove('motion-loading'); exportButton.removeAttribute('aria-busy'); }
 }
 document.getElementById('addPlayerBtn').addEventListener('click', () => { if(setupPlayers.length<8) { setupPlayers.push(''); renderPlayerNameInputs(); } });
 document.getElementById('profileAvatarSelect').addEventListener('change', syncProfilePreview);
@@ -1420,11 +1448,15 @@ function renderRoomTools() {
   if (!online) return;
   if (roomInfo.connected && socket.connected) setConnectionStatus('联机模式 [房间号:' + roomInfo.roomCode + '] · ' + state.players.filter(p=>p.online).length + ' 人在线', 'online');
   const editButton = document.getElementById('editProfileBtn');
-  const list = document.getElementById('roomMemberList'); list.replaceChildren();
+  const list = document.getElementById('roomMemberList');
+  const previousMembers = new Map([...list.querySelectorAll('[data-member-id]')].map(row => [row.dataset.memberId, row.dataset.status]));
+  list.replaceChildren();
   editButton.classList.add('hidden');
   list.append(editButton);
   for (const player of state.players) {
     const row = document.createElement('div'); row.className = 'room-member';
+    row.dataset.memberId = player.id; row.dataset.status = String(player.online) + ':' + String(player.left);
+    if (previousMembers.get(String(player.id)) !== row.dataset.status) row.classList.add('motion-enter');
     const text = document.createElement('span'); text.textContent = player.name + (player.id === selfPlayerId ? '（我）' : '') + ' · ' + (player.left?'已离开':player.online?'在线':'离线') + (player.isHost?' [房主]':'');
     row.append(text);
     if (player.id === selfPlayerId) {
@@ -1545,46 +1577,61 @@ if (inviteCode && /^\d{4}$/.test(inviteCode) && !roomInfo.roomCode) { document.g
 for (const selectId of ['profileAvatarSelect','editAvatarSelect']) {
   const select = document.getElementById(selectId);
   const initialOption = document.createElement('option'); initialOption.textContent = '昵称'; select.prepend(initialOption);
-  for (const symbol of ['🐶','🦊','🐯','🐰','🐸','🐨','🦁','🐵','🐧','🦉','🌙','⭐','🌻','🍀','🔥','🌊','🎲','🎯']) { const option = document.createElement('option'); option.textContent = symbol; select.append(option); }
+  for (const symbol of ['😀','😊','😂','😎','🤔','😴','☀️','☁️','🌧️','❄️','🐶','🦊','🐯','🐰','🐸','🐨','🦁','🐵','🐧','🦉','🐻','🐹','🌙','⭐','🌻','🍀','🔥','🌊','🎲']) { const option = document.createElement('option'); option.textContent = symbol; select.append(option); }
   const picker = document.createElement('details'); picker.className = 'avatar-picker';
-  const title = document.createElement('summary'); title.textContent = '选择头像'; picker.append(title);
+  const title = document.createElement('summary'); title.textContent = '图案'; picker.append(title);
   const grid = document.createElement('div'); grid.className = 'avatar-options';
+  const randomPattern = document.createElement('button'); randomPattern.type = 'button'; randomPattern.className = 'secondary-btn avatar-option'; randomPattern.innerHTML = avatarGraphic('❓'); randomPattern.setAttribute('aria-label', '随机图案');
+  randomPattern.addEventListener('click', () => { const options = [...grid.querySelectorAll('button[data-symbol]')].filter(button => button.dataset.symbol !== select.value && button.dataset.symbol !== '昵称'); options[Math.floor(Math.random() * options.length)].click(); }); grid.append(randomPattern);
   for (const option of select.options) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary-btn'; button.textContent = option.value === '昵称' ? '字' : option.value; button.setAttribute('aria-label', '头像：' + option.value);
-    button.addEventListener('click', () => { select.value = option.value; title.textContent = '头像：' + button.textContent; if (selectId === 'profileAvatarSelect') syncProfilePreview(); else syncEditPreview(); picker.open = selectId === 'profileAvatarSelect'; }); grid.append(button);
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary-btn avatar-option'; button.textContent = option.value === '昵称' ? '字' : option.value; button.setAttribute('aria-label', '头像：' + option.value);
+    button.setAttribute('aria-pressed', String(select.value === option.value));
+    button.dataset.symbol = option.value;
+    button.innerHTML = option.value === '昵称' ? '字' : avatarGraphic(option.value);
+    button.addEventListener('click', () => { select.value = option.value; grid.querySelectorAll('button').forEach(choice => choice.setAttribute('aria-pressed', String(choice === button))); title.textContent = '图案'; if (selectId === 'profileAvatarSelect') syncProfilePreview(); else syncEditPreview(); const preview = document.getElementById(selectId === 'profileAvatarSelect' ? 'profileAvatar' : 'editAvatarPreview'); if (!motionReduced()) preview.animate([{ opacity: .4, transform: 'scale(.9)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 200 }); picker.open = true; }); grid.append(button);
   }
-  picker.open = selectId === 'profileAvatarSelect';
+  picker.open = true;
   picker.append(grid); select.after(picker); select.classList.add('hidden');
 }
 function avatarHue(id) { return Array.from(String(id)).reduce((sum, char) => (sum * 31 + char.codePointAt(0)) % 360, 0); }
-function playerAvatarBackground(player) { return avatarColors.some(([,color]) => color && color === player.avatarColor) ? player.avatarColor : `hsl(${avatarHue(player.id)} 35% 35%)`; }
+function avatarGradient(color) { return `linear-gradient(145deg, color-mix(in srgb, ${color} 78%, white), ${color} 55%, color-mix(in srgb, ${color} 82%, #172033))`; }
+function playerAvatarBackground(player) { return avatarGradient([...avatarColors.map(([,color]) => color), '#64748b','#a67d87','#69869c'].includes(player.avatarColor) && player.avatarColor ? player.avatarColor : `hsl(${avatarHue(player.id)} 35% 35%)`); }
+function avatarGraphic(symbol) {
+  const assets = {'👑':'crown','🤡':'clown_face','❓':'red_question_mark','😀':'grinning_face','😊':'smiling_face_with_smiling_eyes','😂':'face_with_tears_of_joy','😎':'smiling_face_with_sunglasses','🤔':'thinking_face','😴':'sleeping_face','☀️':'sun','☁️':'cloud','🌧️':'cloud_with_rain','❄️':'snowflake','🐻':'bear','🐹':'hamster','🐱':'cat_face','🐼':'panda','🐶':'dog_face','🦊':'fox','🐯':'tiger_face','🐰':'rabbit_face','🐸':'frog','🐨':'koala','🦁':'lion','🐵':'monkey_face','🐧':'penguin','🦉':'owl','🌙':'crescent_moon','⭐':'star','🌻':'sunflower','🍀':'four_leaf_clover','🔥':'fire','🌊':'water_wave','🎲':'game_die','🎯':'bullseye'};
+  return assets[symbol] ? `<img class="avatar-emoji" src="/image/emoji/${assets[symbol]}_3d.png" alt="${escapeHtml(symbol)}" draggable="false" />` : escapeHtml(symbol);
+}
 function syncEditPreview() {
   const name = document.getElementById('editNameInput').value.trim(); const symbol = document.getElementById('editAvatarSelect').value;
   const preview = document.getElementById('editAvatarPreview');
-  preview.textContent = symbol === '昵称' ? (/^玩家([1-8])$/.exec(name)?.[1] || Array.from(name)[0] || '?') : symbol;
+  preview.innerHTML = avatarGraphic(symbol === '昵称' ? (/^玩家([1-8])$/.exec(name)?.[1] || Array.from(name)[0] || '?') : symbol);
   const player = state.players.find(p => p.id === (editingLocalPlayerId || selfPlayerId));
-  preview.style.background = document.getElementById('editAvatarColor').value || playerAvatarBackground({id:player?.id || 'preview'});
+  preview.style.background = document.getElementById('editAvatarColor').value ? avatarGradient(document.getElementById('editAvatarColor').value) : playerAvatarBackground({id:player?.id || 'preview'});
   document.getElementById('editPreviewName').textContent = name || '昵称预览';
+  syncAvatarSelection('editAvatarSelect');
+}
+function syncAvatarSelection(id) {
+  const select = document.getElementById(id);
+  select.nextElementSibling?.querySelectorAll('.avatar-option').forEach(button => button.setAttribute('aria-pressed', String(button.getAttribute('aria-label') === '头像：' + select.value)));
 }
 function openProfileEditor(player, local) {
   editingLocalPlayerId = local ? player.id : null;
   document.getElementById('editNameInput').value = player.name;
   document.getElementById('editAvatarSelect').value = player.avatar || '昵称';
   document.getElementById('editAvatarColor').value = player.avatarColor || '';
-  document.getElementById('editAvatarSelect').nextElementSibling.querySelector('summary').textContent = '选择头像';
-  document.getElementById('editAvatarSelect').nextElementSibling.open = false;
+  document.getElementById('editAvatarSelect').nextElementSibling.querySelector('summary').textContent = '图案';
+  document.getElementById('editAvatarSelect').nextElementSibling.open = true;
   refreshColorChoices('edit'); syncEditPreview(); document.getElementById('profileDialog').classList.remove('hidden');
 }
 function refreshColorChoices(prefix) {
   const selected = document.getElementById(prefix + 'AvatarColor').value;
-  document.querySelectorAll('#' + prefix + 'ColorChoices button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.color === selected)));
+  document.querySelectorAll('#' + prefix + 'ColorChoices button').forEach(button => button.setAttribute('aria-pressed', String(Boolean(button.dataset.color) && button.dataset.color === selected)));
 }
 for (const prefix of ['profile','edit']) {
   const list = document.getElementById(prefix + 'ColorChoices');
   for (const [name,color] of avatarColors) {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'avatar-color'; button.dataset.color = color;
-    button.setAttribute('aria-label', '底色：' + name); button.title = name; button.style.background = color || 'var(--panel-2)'; button.textContent = color ? '' : '自';
-    button.addEventListener('click', () => { document.getElementById(prefix + 'AvatarColor').value = color; refreshColorChoices(prefix); prefix === 'profile' ? syncProfilePreview() : syncEditPreview(); }); list.append(button);
+    button.setAttribute('aria-label', color ? '底色：' + name : '随机底色'); button.title = name; button.style.background = avatarGradient(color || 'var(--panel-2)'); button.innerHTML = color ? '' : avatarGraphic('❓');
+    button.addEventListener('click', () => { const current = document.getElementById(prefix + 'AvatarColor').value; const choices = avatarColors.filter(([,value]) => value && value !== current); document.getElementById(prefix + 'AvatarColor').value = color || choices[Math.floor(Math.random() * choices.length)][1]; refreshColorChoices(prefix); prefix === 'profile' ? syncProfilePreview() : syncEditPreview(); }); list.append(button);
   }
   refreshColorChoices(prefix);
 }
@@ -1595,7 +1642,7 @@ document.getElementById('localPlayersBtn').addEventListener('click', () => {
   for (const player of state.players) {
     const row = document.createElement('div'); row.className = 'local-room-member';
     const avatar = document.createElement('div'); avatar.className = 'avatar'; avatar.style.background = playerAvatarBackground(player);
-    const initial = /^玩家([1-8])$/.exec(player.name)?.[1] || Array.from(player.name)[0]; avatar.textContent = player.avatar && player.avatar !== '昵称' ? player.avatar : initial;
+    const initial = /^玩家([1-8])$/.exec(player.name)?.[1] || Array.from(player.name)[0]; avatar.innerHTML = avatarGraphic(player.avatar && player.avatar !== '昵称' ? player.avatar : initial);
     const info = document.createElement('div'); info.className = 'local-member-info';
     const name = document.createElement('strong'); name.textContent = player.name;
     const score = document.createElement('span'); score.className = player.score < 0 ? 'score-negative' : 'score-positive'; score.textContent = '积分 ' + player.score; info.append(name, score);
@@ -1625,4 +1672,83 @@ function foldHelpText(element, title) {
 }
 foldHelpText(document.getElementById('roomManageHint'), '房间说明');
 foldHelpText(document.getElementById('scoreImagePreview').nextElementSibling, '保存图片说明');
-document.querySelectorAll('.lobby-card-hint').forEach(element => foldHelpText(element, '操作说明'));
+
+/* Motion stays decorative: final scores and connection state are available immediately. */
+function motionReduced() { return matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function animateScore(card, before, after) {
+  if (motionReduced()) return;
+  const label = card.querySelector('.score-badge');
+  label.setAttribute('aria-label', '积分 ' + after);
+  const delta = document.createElement('span'); delta.className = 'score-delta ' + (after < before ? 'score-negative' : 'score-positive');
+  delta.textContent = (after > before ? '+' : '') + (after - before); delta.setAttribute('aria-hidden', 'true'); card.append(delta);
+  delta.addEventListener('animationend', () => delta.remove(), { once: true });
+  const started = performance.now();
+  function frame(now) {
+    if (!card.isConnected) return;
+    const progress = Math.min((now - started) / 300, 1);
+    label.textContent = '积分 ' + Math.round(before + (after - before) * (1 - Math.pow(1 - progress, 3)));
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function animateSetupRows(previous, removed = []) {
+  if (motionReduced()) return;
+  const rows = [...playerNameInputs.querySelectorAll('.setup-player-row')];
+  rows.forEach((row, index) => {
+    const old = previous[index];
+    if (!old) { row.classList.add('motion-enter'); return; }
+    const rect = row.getBoundingClientRect();
+    row.animate([{ transform: `translate(${old.rect.left - rect.left}px, ${old.rect.top - rect.top}px)` }, { transform: 'translate(0,0)' }], { duration: 220, easing: 'ease-out' });
+  });
+  [...removed, ...previous.slice(rows.length)].forEach(({rect, clone}) => {
+    if (!rect.width) return;
+    clone.classList.add('motion-ghost'); clone.setAttribute('aria-hidden', 'true'); clone.inert = true;
+    Object.assign(clone.style, { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', height: rect.height + 'px' });
+    document.body.append(clone);
+    clone.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(.95)' }], { duration: 160 }).finished.then(() => clone.remove());
+  });
+}
+// Shared transitions also cover dynamically created room and archive dialogs.
+const motionVisibility = new WeakMap();
+const motionTimers = new WeakMap();
+function rememberMotionElements() {
+  document.querySelectorAll('.dialog-overlay, .dialog-card, main > section.panel').forEach(element => {
+    if (!motionVisibility.has(element)) motionVisibility.set(element, !element.classList.contains('hidden'));
+  });
+}
+rememberMotionElements();
+new MutationObserver(records => {
+  for (const record of records) {
+    const element = record.target;
+    if (record.type !== 'attributes' || !motionVisibility.has(element)) continue;
+    const visible = !element.classList.contains('hidden');
+    if (visible === motionVisibility.get(element)) continue;
+    motionVisibility.set(element, visible);
+    clearTimeout(motionTimers.get(element));
+    element.classList.remove('motion-closing');
+    if (motionReduced()) continue;
+    if (visible) {
+      element.animate(element.matches('.dialog-overlay') ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(8px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: 200, easing: 'ease-out' });
+    } else if (element.matches('.dialog-overlay')) {
+      element.classList.add('motion-closing');
+      motionTimers.set(element, setTimeout(() => element.classList.remove('motion-closing'), 120));
+    }
+  }
+  rememberMotionElements();
+}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
+document.addEventListener('click', event => {
+  const summary = event.target.closest('summary');
+  if (!summary || motionReduced()) return;
+  const details = summary.parentElement;
+  if (details.tagName !== 'DETAILS') return;
+  event.preventDefault();
+  if (details.dataset.animating) return;
+  const opening = !details.open;
+  const from = details.getBoundingClientRect().height;
+  const previousOverflow = details.style.overflow;
+  details.dataset.animating = 'true'; details.open = true;
+  const to = opening ? details.getBoundingClientRect().height : summary.getBoundingClientRect().height + parseFloat(getComputedStyle(details).paddingTop) + parseFloat(getComputedStyle(details).paddingBottom);
+  details.style.overflow = 'hidden';
+  const animation = details.animate([{ height: from + 'px' }, { height: to + 'px' }], { duration: 220, easing: 'ease-out' });
+  animation.finished.finally(() => { details.open = opening; details.style.overflow = previousOverflow; delete details.dataset.animating; });
+});

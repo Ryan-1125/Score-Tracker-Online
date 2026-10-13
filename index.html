@@ -77,9 +77,9 @@
       </section>
 
       <section class="panel registration-panel hidden" id="countPanel">
-        <div class="panel-header-row"><h2>设置玩家</h2><button id="countBackBtn" class="secondary-btn" type="button">返回</button></div>
+        <div class="panel-header-row"><h2>设置玩家</h2><div class="setup-header-actions"><button id="addPlayerBtn" type="button" class="secondary-btn">＋ 添加玩家</button><button id="countBackBtn" class="secondary-btn" type="button">返回</button></div></div>
         <form id="registrationForm" class="registration-form">
-          <div class="inputs-grid" id="playerNameInputs"><button id="addPlayerBtn" type="button" class="secondary-btn add-player">＋ 添加玩家</button></div>
+          <div class="inputs-grid" id="playerNameInputs"></div>
           <div class="registration-actions"><p id="playerCountHint" class="tips">2 / 8 位玩家 · 点击昵称可修改</p><button type="submit" class="primary-btn">开始记分</button></div>
         </form>
         <div hidden><input id="playerCountInput" value="2" /><button id="nextStepBtn"></button><button id="backToCountBtn"></button><div id="nicknamePanel" class="hidden"></div></div>
@@ -93,27 +93,25 @@
         <div class="lobby-profile">
         <div class="profile-preview online-profile">
           <div id="profileAvatar" class="avatar">♠</div>
-          <label class="lobby-name">你的昵称<input id="profileNameInput" aria-label="联机昵称" type="text" maxlength="8" placeholder="输入昵称，进入房间后也能修改" /></label>
+          <label class="lobby-name">你的昵称<input id="profileNameInput" aria-label="联机昵称" type="text" maxlength="8" placeholder="输入昵称" /></label>
         </div>
-        <details class="lobby-customization"><summary>自定义头像与底色</summary><div class="lobby-customization-content">
-          <p class="field-caption">头像图案</p>
+        <details class="lobby-customization"><summary>自定义头像</summary><div class="lobby-customization-content">
+          <p class="field-caption">图案</p>
           <select id="profileAvatarSelect" aria-label="选择头像"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select>
           <input id="profileAvatarColor" type="hidden" value="" />
-          <p class="field-caption">头像底色</p>
-          <div id="profileColorChoices" class="avatar-color-choices" role="group" aria-label="头像底色"></div>
+          <p class="field-caption">底色</p>
+          <div id="profileColorChoices" class="avatar-color-choices" role="group" aria-label="底色"></div>
         </div></details>
         </div>
         <div class="room-controls">
           <div class="room-card room-card-create">
             <h3>我要开房</h3>
-            <p class="lobby-card-hint">创建房间，把房间号发给朋友。</p>
             <div class="room-card-row">
               <button id="createRoomBtn" class="primary-btn">创建房间</button>
             </div>
           </div>
           <div class="room-card room-card-join">
             <h3>我要进房</h3>
-            <p class="lobby-card-hint">输入朋友分享的 4 位房间号。</p>
             <div class="room-card-row">
               <button id="joinRoomBtn" class="primary-btn">加入房间</button>
               <input id="joinRoomCodeInput" aria-label="房间号" type="text" inputmode="numeric" placeholder="4位房间号" maxlength="4" />
@@ -272,7 +270,7 @@
     <div id="roomActionDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="roomActionTitle"><h3 id="roomActionTitle"></h3><p id="roomActionMessage"></p><div class="dialog-actions"><button id="roomActionCancel" type="button" class="dialog-btn dialog-btn-cancel">取消</button><button id="roomActionConfirm" type="button" class="dialog-btn dialog-btn-confirm">确认</button></div></div></div>
     <div id="undoDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="undoTitle"><h3 id="undoTitle">撤销记分</h3><p id="undoMessage"></p><div class="dialog-actions"><button id="undoCancelBtn" type="button" class="dialog-btn dialog-btn-cancel">取消</button><button id="undoConfirmBtn" type="button" class="dialog-btn dialog-btn-confirm">确认撤销</button></div></div></div>
     <div id="imagePreviewDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="imagePreviewTitle"><button id="imagePreviewClose" type="button" class="dialog-close" aria-label="关闭图片预览">×</button><h3 id="imagePreviewTitle">结算图片</h3><img id="scoreImagePreview" alt="本局积分排行和结算建议" style="width:100%;height:auto;border-radius:12px" /><p>可保存图片分享；手机也可长按图片保存。</p><div class="dialog-actions"><a id="saveImageLink" class="primary-btn success-btn" download="牌局结算.png">保存图片</a></div></div></div>
-    <div id="profileDialog" class="dialog-overlay hidden"><form id="profileEditForm" class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle"><h3 id="profileEditTitle">编辑信息</h3><div class="edit-avatar-preview"><div id="editAvatarPreview" class="avatar"></div><p id="editPreviewName"></p></div><label>昵称<input id="editNameInput" maxlength="8" required /></label><label>头像<select id="editAvatarSelect"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select></label><input id="editAvatarColor" type="hidden" value="" /><div><p class="field-caption">头像底色</p><div id="editColorChoices" class="avatar-color-choices" role="group" aria-label="头像底色"></div></div><div class="dialog-actions"><button id="profileCancelBtn" type="button" class="secondary-btn">取消</button><button type="submit" class="primary-btn success-btn">保存</button></div></form></div>
+    <div id="profileDialog" class="dialog-overlay hidden"><form id="profileEditForm" class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle"><h3 id="profileEditTitle">编辑信息</h3><div class="edit-avatar-preview"><div id="editAvatarPreview" class="avatar"></div><p id="editPreviewName"></p></div><label>昵称<input id="editNameInput" maxlength="8" required /></label><label>图案<select id="editAvatarSelect"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select></label><input id="editAvatarColor" type="hidden" value="" /><div><p class="field-caption">底色</p><div id="editColorChoices" class="avatar-color-choices" role="group" aria-label="底色"></div></div><div class="dialog-actions"><button id="profileCancelBtn" type="button" class="secondary-btn">取消</button><button type="submit" class="primary-btn success-btn">保存</button></div></form></div>
     <div id="localPlayersDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="localPlayersTitle"><button id="localPlayersClose" type="button" class="dialog-close" aria-label="关闭房间管理">×</button><h3 id="localPlayersTitle">房间管理</h3><p id="localRoomSummary" class="room-summary"></p><details class="inline-help"><summary>房间说明</summary><p>点击成员右侧的编辑信息，修改昵称、头像和底色。积分和已有记录会保留。</p></details><div id="localPlayersList" class="local-players-list"></div></div></div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="score-core.js"></script>

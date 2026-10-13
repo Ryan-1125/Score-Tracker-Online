@@ -58,12 +58,12 @@ test('online room lifecycle', async t => {
       assert.deepEqual(room.players.map(p=>p.score),[-5,5]); assert.equal(room.logs.length,1);
     });
     await t.test('rename preserves scores and ledger identity', async () => {
-      updated=event(host,'room-state'); await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'🐼',avatarColor:'#357960'}); room=await updated;
-      assert.equal(room.players[0].avatar,'🐼'); assert.equal(room.logs[0].from,'新甲'); assert.equal(room.logs[0].fromId,hostId);
+      updated=event(host,'room-state'); await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'😀',avatarColor:'#9a9255'}); room=await updated;
+      assert.equal(room.players[0].avatar,'😀'); assert.equal(room.logs[0].from,'新甲'); assert.equal(room.logs[0].fromId,hostId);
       assert.equal((await command(guest,'update-profile',{roomCode:code,playerName:'新甲',avatar:'♠'})).ok,false);
       assert.equal((await command(guest,'update-profile',{roomCode:code,playerName:'乙',avatar:'bad'})).ok,false);
-      assert.equal(room.players[0].avatarColor,'#357960');
-      assert.equal((await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'🐼',avatarColor:'red;invalid'})).ok,false);
+      assert.equal(room.players[0].avatarColor,'#9a9255');
+      assert.equal((await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'😀',avatarColor:'red;invalid'})).ok,false);
     });
     let restored;
     await t.test('disconnect and refresh keep identity and balance', async () => {
@@ -72,7 +72,7 @@ test('online room lifecycle', async t => {
       restored=await connect(); updated=event(restored,'room-state');
       await command(restored,'rejoin-room',{roomCode:code,token:hostSession.token}); room=await updated;
       assert.equal(room.hostId,hostId); assert.equal(room.players[0].id,hostId); assert.equal(room.players[0].score,-5);
-      assert.equal(room.players[0].avatarColor,'#357960');
+      assert.equal(room.players[0].avatarColor,'#9a9255');
     });
     await t.test('one connection cannot join multiple rooms', async () => {
       assert.equal((await command(restored,'create-room',{hostName:'重复'})).ok,false);
