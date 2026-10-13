@@ -53,6 +53,11 @@ function avatarValue(value) {
   if (!['昵称', '♠', '♥', '♦', '♣', '🐱', '🐼', '🐶', '🦊', '🐯', '🐰', '🐸', '🐨', '🦁', '🐵', '🐧', '🦉', '🌙', '⭐', '🌻', '🍀', '🔥', '🌊', '🎲', '🎯'].includes(value)) throw new Error('请选择有效头像');
   return value;
 }
+function avatarColorValue(value) {
+  if (value == null || value === '') return null;
+  if (!['#357960','#3b72b8','#8056ad','#ba5076','#b66b32','#497f88','#a54949','#64748b'].includes(value)) throw new Error('请选择有效头像底色');
+  return value;
+}
 function setHost(room, player) {
   room.hostId = player?.id || null; room.hostName = player?.name || ''; room.hostOfflineSince = null;
   room.players.forEach(p => { p.isHost = p.id === room.hostId; });
@@ -93,7 +98,7 @@ io.on('connection', socket => {
     socket.join(room.roomCode); saveRoom(room);
     socket.emit('session-token', { token: player.token, playerId: player.id });
   }
-  on('create-room', ({ hostName, avatar }) => {
+  on('create-room', ({ hostName, avatar, avatarColor }) => {
     requireLobby(); hostName = name(hostName); avatar = avatarValue(avatar);
     let roomCode;
     for (let attempt = 0; attempt < 10000; attempt++) {
@@ -101,11 +106,11 @@ io.on('connection', socket => {
       if (!getRoom(candidate)) { roomCode = candidate; break; }
     }
     if (!roomCode) throw new Error('房间已满，请稍后再试');
-    const player = { id: randomUUID(), name: hostName, avatar, score: 0, isHost: true, token: randomUUID() };
+    const player = { id: randomUUID(), name: hostName, avatar, avatarColor: avatarColorValue(avatarColor), score: 0, isHost: true, token: randomUUID() };
     const room = { roomCode, hostName, hostId: player.id, players: [player], logs: [], createdAt: Date.now(), schemaVersion: 2 };
     enter(room, player); socket.emit('room-created', publicState(room));
   });
-  on('join-room', ({ roomCode, playerName, avatar, password }) => {
+  on('join-room', ({ roomCode, playerName, avatar, avatarColor, password }) => {
     requireLobby(); playerName = name(playerName); avatar = avatarValue(avatar);
     const room = getRoom(roomCode);
     if (!room) throw new Error('房间不存在或已解散');
@@ -113,7 +118,7 @@ io.on('connection', socket => {
     if (room.passwordHash && (typeof password !== 'string' || password.length > 32 || !timingSafeEqual(Buffer.from(room.passwordHash, 'hex'), scryptSync(password, room.passwordSalt, 32)))) throw new Error('房间密码不正确');
     if (room.players.length >= 8) throw new Error('房间最多支持 8 位玩家（含保留账目的席位）');
     if (room.players.some(p => p.name === playerName)) throw new Error('昵称已存在，请使用原设备恢复或更换昵称');
-    const player = { id: randomUUID(), name: playerName, avatar, score: 0, isHost: false, token: randomUUID() };
+    const player = { id: randomUUID(), name: playerName, avatar, avatarColor: avatarColorValue(avatarColor), score: 0, isHost: false, token: randomUUID() };
     room.players.push(player); enter(room, player); broadcast(room);
   });
   on('rejoin-room', ({ roomCode, token }) => {
@@ -142,15 +147,16 @@ io.on('connection', socket => {
     room.requests.push(requestKey); room.requests = room.requests.slice(-1000);
     saveRoom(room); broadcast(room);
   });
-  on('update-profile', ({ roomCode, playerName, avatar }) => {
+  on('update-profile', ({ roomCode, playerName, avatar, avatarColor }) => {
     const room = member(roomCode); playerName = name(playerName); avatar = avatarValue(avatar);
+    const color = avatarColorValue(avatarColor);
     const player = room.players.find(p => p.id === socket.data.playerId);
     if (room.players.some(p => p !== player && p.name === playerName)) throw new Error('昵称已存在');
     const oldName = player.name;
     room.logs.forEach(log => { if (log.from === oldName) log.from = playerName; if (log.to === oldName) log.to = playerName; });
-    player.name = playerName; player.avatar = avatar;
+    player.name = playerName; player.avatar = avatar; player.avatarColor = color;
     if (player.isHost) room.hostName = playerName;
-    saveRoom(room); socket.emit('profile-updated', { playerName, avatar }); broadcast(room);
+    saveRoom(room); socket.emit('profile-updated', { playerName, avatar, avatarColor: color }); broadcast(room);
   });
   on('undo-score', ({ roomCode, logId }) => {
     const room = member(roomCode, true); const log = room.logs[0];
@@ -181,7 +187,7 @@ io.on('connection', socket => {
     if (round !== (room.round || 1)) throw new Error('已开始下一局，请刷新结算');
     if (!room.logs.length) throw new Error('本局还没有记录');
     room.rounds ||= [];
-    room.rounds.unshift({ number: room.round || 1, endedAt: new Date().toISOString(), players: room.players.map(p => ({ id: p.id, name: p.name, avatar: p.avatar, score: p.score })), logs: room.logs });
+    room.rounds.unshift({ number: room.round || 1, endedAt: new Date().toISOString(), players: room.players.map(p => ({ id: p.id, name: p.name, avatar: p.avatar, avatarColor: p.avatarColor, score: p.score })), logs: room.logs });
     room.round = (room.round || 1) + 1; room.logs = []; room.players = room.players.filter(p => !p.left);
     room.players.forEach(p => { p.score = 0; }); saveRoom(room); broadcast(room);
   });

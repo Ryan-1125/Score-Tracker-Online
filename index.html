@@ -90,28 +90,38 @@
           <h2 class="step-title">联机房间</h2>
           <button id="roomBackBtn" class="secondary-btn">返回</button>
         </div>
+        <div class="lobby-profile">
         <div class="profile-preview online-profile">
           <div id="profileAvatar" class="avatar">♠</div>
-          <input id="profileNameInput" aria-label="联机昵称" type="text" maxlength="8" placeholder="你的昵称" />
+          <label class="lobby-name">你的昵称<input id="profileNameInput" aria-label="联机昵称" type="text" maxlength="8" placeholder="输入昵称，进入房间后也能修改" /></label>
+        </div>
+        <details class="lobby-customization"><summary>自定义头像与底色</summary><div class="lobby-customization-content">
+          <p class="field-caption">头像图案</p>
           <select id="profileAvatarSelect" aria-label="选择头像"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select>
+          <input id="profileAvatarColor" type="hidden" value="" />
+          <p class="field-caption">头像底色</p>
+          <div id="profileColorChoices" class="avatar-color-choices" role="group" aria-label="头像底色"></div>
+        </div></details>
         </div>
         <div class="room-controls">
           <div class="room-card room-card-create">
             <h3>我要开房</h3>
+            <p class="lobby-card-hint">创建房间，把房间号发给朋友。</p>
             <div class="room-card-row">
               <button id="createRoomBtn" class="primary-btn">创建房间</button>
             </div>
           </div>
           <div class="room-card room-card-join">
             <h3>我要进房</h3>
+            <p class="lobby-card-hint">输入朋友分享的 4 位房间号。</p>
             <div class="room-card-row">
               <button id="joinRoomBtn" class="primary-btn">加入房间</button>
               <input id="joinRoomCodeInput" aria-label="房间号" type="text" inputmode="numeric" placeholder="4位房间号" maxlength="4" />
             </div>
+            <details id="joinPasswordDetails" class="join-password-details"><summary>房间有密码？</summary><label class="room-password">房间密码<input id="joinPassword" type="password" maxlength="32" autocomplete="off" placeholder="输入房主设置的密码" /></label></details>
           </div>
         </div>
         <div id="recentSeatRow" class="recent-seat-row hidden"><select id="recentSeatSelect" aria-label="之前的席位"></select><button id="restoreSeatBtn" type="button" class="secondary-btn">恢复席位</button></div>
-        <label class="room-password">房间密码（有密码时填写）<input id="joinPassword" type="password" maxlength="32" autocomplete="off" /></label>
         <div id="roomInfoBox" class="room-info-box hidden"></div>
       </section>
 
@@ -123,15 +133,16 @@
           <p id="activePlayerInfo" class="player-info-title">请选择出分人</p>
           <div class="score-actions">
             <button id="undoBtn" class="secondary-btn" type="button">撤销</button>
+            <button id="localPlayersBtn" class="secondary-btn hidden" type="button">房间</button>
             <div id="gameRoomInfo" class="game-room-info hidden"><button id="roomManageBtn" class="secondary-btn" type="button">房间</button></div>
           </div>
         </div>
 
         <div id="playersGrid" class="players-grid"></div>
 
-        <div class="tips">
+        <details class="inline-help"><summary>记分说明</summary>
           <p>提示：先点击一位玩家作为“出分人”，然后点击另一位玩家选择转入的分数。</p>
-        </div>
+        </details>
       </section>
 
       <!-- 【模块四：积分记录历史面板（初始隐藏：hidden）】
@@ -169,13 +180,38 @@
     <div id="amountDialog" class="dialog-overlay hidden">
       <div class="dialog-card" role="dialog" aria-modal="true">
         <h3>输入转分金额</h3>
+        <p id="amountTransferSummary" class="tips"></p>
         <div class="amount-input-group">
-          <label>转分金额：</label>
-          <input id="amountDialogInput" type="number" min="1" value="1" />
+          <label for="amountDialogInput">转分金额：</label>
+          <input id="amountDialogInput" type="text" inputmode="numeric" maxlength="7" value="1" readonly />
+          <button id="amountManualInput" class="secondary-btn" type="button">手动输入</button>
+        </div>
+        <div id="amountQuickChoices" class="amount-quick-choices" aria-label="常用分数">
+          <button type="button" class="secondary-btn" data-amount="1">1</button>
+          <button type="button" class="secondary-btn" data-amount="2">2</button>
+          <button type="button" class="secondary-btn" data-amount="5">5</button>
+          <button type="button" class="secondary-btn" data-amount="10">10</button>
+          <button type="button" class="secondary-btn" data-amount="20">20</button>
+          <button type="button" class="secondary-btn" data-amount="50">50</button>
+        </div>
+        <details class="quick-score-settings"><summary>设置常用分数</summary><div class="quick-score-settings-row"><input id="quickScoresInput" type="text" inputmode="text" aria-label="常用分数设置" placeholder="例如：1,2,5,10,20,50" /><button id="saveQuickScoresBtn" type="button" class="secondary-btn">保存</button></div><p class="tips">最多 6 个正整数，用逗号或空格分隔。</p></details>
+        <div id="amountKeypad" class="amount-keypad" aria-label="积分数字键盘">
+          <button type="button" class="secondary-btn" data-digit="1">1</button>
+          <button type="button" class="secondary-btn" data-digit="2">2</button>
+          <button type="button" class="secondary-btn" data-digit="3">3</button>
+          <button type="button" class="secondary-btn" data-digit="4">4</button>
+          <button type="button" class="secondary-btn" data-digit="5">5</button>
+          <button type="button" class="secondary-btn" data-digit="6">6</button>
+          <button type="button" class="secondary-btn" data-digit="7">7</button>
+          <button type="button" class="secondary-btn" data-digit="8">8</button>
+          <button type="button" class="secondary-btn" data-digit="9">9</button>
+          <button type="button" class="secondary-btn" data-key="clear">清空</button>
+          <button type="button" class="secondary-btn" data-digit="0">0</button>
+          <button type="button" class="secondary-btn" data-key="backspace" aria-label="删除末位数字">⌫</button>
         </div>
         <div class="dialog-actions">
-          <button id="amountDialogCancel" class="dialog-btn dialog-btn-cancel">取消</button>
-          <button id="amountDialogConfirm" class="dialog-btn dialog-btn-confirm">确认</button>
+          <button id="amountDialogCancel" class="dialog-btn secondary-btn">取消</button>
+          <button id="amountDialogConfirm" class="dialog-btn success-btn">确认转分</button>
         </div>
       </div>
     </div>
@@ -236,7 +272,8 @@
     <div id="roomActionDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="roomActionTitle"><h3 id="roomActionTitle"></h3><p id="roomActionMessage"></p><div class="dialog-actions"><button id="roomActionCancel" type="button" class="dialog-btn dialog-btn-cancel">取消</button><button id="roomActionConfirm" type="button" class="dialog-btn dialog-btn-confirm">确认</button></div></div></div>
     <div id="undoDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="undoTitle"><h3 id="undoTitle">撤销记分</h3><p id="undoMessage"></p><div class="dialog-actions"><button id="undoCancelBtn" type="button" class="dialog-btn dialog-btn-cancel">取消</button><button id="undoConfirmBtn" type="button" class="dialog-btn dialog-btn-confirm">确认撤销</button></div></div></div>
     <div id="imagePreviewDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="imagePreviewTitle"><button id="imagePreviewClose" type="button" class="dialog-close" aria-label="关闭图片预览">×</button><h3 id="imagePreviewTitle">结算图片</h3><img id="scoreImagePreview" alt="本局积分排行和结算建议" style="width:100%;height:auto;border-radius:12px" /><p>可保存图片分享；手机也可长按图片保存。</p><div class="dialog-actions"><a id="saveImageLink" class="primary-btn success-btn" download="牌局结算.png">保存图片</a></div></div></div>
-    <div id="profileDialog" class="dialog-overlay hidden"><form id="profileEditForm" class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle"><h3 id="profileEditTitle">编辑信息</h3><label>昵称<input id="editNameInput" maxlength="8" required /></label><label>头像<select id="editAvatarSelect"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select></label><div class="dialog-actions"><button id="profileCancelBtn" type="button" class="secondary-btn">取消</button><button type="submit" class="primary-btn">保存</button></div></form></div>
+    <div id="profileDialog" class="dialog-overlay hidden"><form id="profileEditForm" class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle"><h3 id="profileEditTitle">编辑信息</h3><div class="edit-avatar-preview"><div id="editAvatarPreview" class="avatar"></div><p id="editPreviewName"></p></div><label>昵称<input id="editNameInput" maxlength="8" required /></label><label>头像<select id="editAvatarSelect"><option>♠</option><option>♥</option><option>♦</option><option>♣</option><option>🐱</option><option>🐼</option></select></label><input id="editAvatarColor" type="hidden" value="" /><div><p class="field-caption">头像底色</p><div id="editColorChoices" class="avatar-color-choices" role="group" aria-label="头像底色"></div></div><div class="dialog-actions"><button id="profileCancelBtn" type="button" class="secondary-btn">取消</button><button type="submit" class="primary-btn success-btn">保存</button></div></form></div>
+    <div id="localPlayersDialog" class="dialog-overlay hidden"><div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="localPlayersTitle"><button id="localPlayersClose" type="button" class="dialog-close" aria-label="关闭房间管理">×</button><h3 id="localPlayersTitle">房间管理</h3><p id="localRoomSummary" class="room-summary"></p><details class="inline-help"><summary>房间说明</summary><p>点击成员右侧的编辑信息，修改昵称、头像和底色。积分和已有记录会保留。</p></details><div id="localPlayersList" class="local-players-list"></div></div></div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="score-core.js"></script>
     <script src="script.js"></script>

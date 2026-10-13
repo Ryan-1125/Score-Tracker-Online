@@ -31,18 +31,19 @@ test('online room lifecycle', async t => {
     const host = await connect(), guest = await connect(), outsider = await connect();
     const hostSessionPromise = event(host, 'session-token');
     const created = event(host, 'room-created');
-    assert.equal((await command(host, 'create-room', { hostName: '甲' })).ok, true);
+    assert.equal((await command(host, 'create-room', { hostName: '甲', avatarColor: '#3b72b8' })).ok, true);
     let room = await created; const hostSession = await hostSessionPromise;
     const code = room.roomCode, hostId = hostSession.playerId;
     const guestSessionPromise = event(guest, 'session-token');
     let updated = event(guest, 'room-state');
-    await command(guest, 'join-room', { roomCode: code, playerName: '乙' }); room = await updated;
+    await command(guest, 'join-room', { roomCode: code, playerName: '乙', avatarColor: '#ba5076' }); room = await updated;
     const guestSession = await guestSessionPromise, guestId = guestSession.playerId;
     const transfer = { roomCode: code, fromId: hostId, toId: guestId, amount: 5, requestId: 'request-0001' };
     await t.test('stable identity and public state excludes credentials', () => {
       assert.equal(room.hostId, hostId); assert.notEqual(hostId, host.id);
       assert.equal(room.players[0].token, undefined); assert.equal(room.players[0].socketId, undefined);
       assert.deepEqual(room.players.map(p=>p.online), [true,true]);
+      assert.deepEqual(room.players.map(p=>p.avatarColor), ['#3b72b8','#ba5076']);
     });
     await t.test('unauthorized clients and invalid values cannot write', async () => {
       assert.equal((await command(outsider,'transfer-score',transfer)).ok,false);
@@ -57,10 +58,12 @@ test('online room lifecycle', async t => {
       assert.deepEqual(room.players.map(p=>p.score),[-5,5]); assert.equal(room.logs.length,1);
     });
     await t.test('rename preserves scores and ledger identity', async () => {
-      updated=event(host,'room-state'); await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'🐼'}); room=await updated;
+      updated=event(host,'room-state'); await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'🐼',avatarColor:'#357960'}); room=await updated;
       assert.equal(room.players[0].avatar,'🐼'); assert.equal(room.logs[0].from,'新甲'); assert.equal(room.logs[0].fromId,hostId);
       assert.equal((await command(guest,'update-profile',{roomCode:code,playerName:'新甲',avatar:'♠'})).ok,false);
       assert.equal((await command(guest,'update-profile',{roomCode:code,playerName:'乙',avatar:'bad'})).ok,false);
+      assert.equal(room.players[0].avatarColor,'#357960');
+      assert.equal((await command(host,'update-profile',{roomCode:code,playerName:'新甲',avatar:'🐼',avatarColor:'red;invalid'})).ok,false);
     });
     let restored;
     await t.test('disconnect and refresh keep identity and balance', async () => {
@@ -69,6 +72,7 @@ test('online room lifecycle', async t => {
       restored=await connect(); updated=event(restored,'room-state');
       await command(restored,'rejoin-room',{roomCode:code,token:hostSession.token}); room=await updated;
       assert.equal(room.hostId,hostId); assert.equal(room.players[0].id,hostId); assert.equal(room.players[0].score,-5);
+      assert.equal(room.players[0].avatarColor,'#357960');
     });
     await t.test('one connection cannot join multiple rooms', async () => {
       assert.equal((await command(restored,'create-room',{hostName:'重复'})).ok,false);
